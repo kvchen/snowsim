@@ -13,6 +13,7 @@ public:
   void advance(double timestep);
 
 private:
+  // Object storing the particle data
   const MaterialPoints &m_materialPoints;
 
   // vector of all force fields

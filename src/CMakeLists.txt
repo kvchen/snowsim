@@ -8,7 +8,9 @@ set(SNOWSIM_SOURCE
     # Base classes
     collisionObject.cpp
     forceField.cpp
+    gravityField.cpp
 
+    # Data classes
     particleGrid.cpp
 
     # GUI

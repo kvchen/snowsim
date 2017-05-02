@@ -8,18 +8,34 @@ using namespace SnowSimulator;
  * The simulation proceeds as follows:
  *
  * Rasterize particle data to the grid (rasterizeToGrid)
- * Compute particle volumes and densities (computeParticleVolumes,
- *   computeParticleDensities)
- * Compute grid forces (computeForces)
+ * Compute particle volumes and densities. This is done only once!
+ *   (computeParticleProperties)
+ * Compute grid forces (computeGridForces)
  * Update velocities on grid to v_i' (updateGridVelocities)
  * Grid-based body collisions (computeBodyCollisions)
- * Solve linear system for semi-implicit integration.
- * Update deformation gradient
+ * Solve linear system for semi-implicit integration (solveLinearSystem)
+ * Update deformation gradient (updateDeformationGradient)
  * Update particle velocities (updateParticleVelocities)
  * Particle-based body collisions (computeParticleBodyCollisions)
  * Update particle positions (updateParticlePostions)
  **/
 Simulator::advance(float timestep) {}
+
+Simulator::computeWeights() {}
+
+Simulator::rasterizeToGrid() {}
+
+Simulator::computeParticleProperties() {}
+
+Simulator::computeGridForces() {}
+
+Simulator::updateGridVelocities() {}
+
+Simulator::computeBodyCollisions() {}
+
+Simulator::solveLinearSystem() {}
+
+Simulator::updateDeformationGradient() {}
 
 /**
  * Update the particle velocities according to PIC and FLIP.
