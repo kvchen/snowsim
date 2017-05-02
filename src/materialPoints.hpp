@@ -19,7 +19,7 @@ public:
   Eigen::VectorXf m_volumes;
 
   //
-  Eigen::VectorXF m_weights;
+  Eigen::VectorXf m_weights;
 
   // (3 x num_particles) matrices of particle properties. Each particle
   // contains a number of

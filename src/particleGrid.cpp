@@ -1,10 +1,13 @@
+#include <Eigen/Dense>
 #include <math.h>
 
 #include "particleGrid.hpp"
 
-int ParticleGrid::index(int i, int j, int k) {
-  return i * (m_dim.y() * m_dim.z()) + j * (m_dim.z()) + k;
-}
+using namespace SnowSimulator;
+
+// int ParticleGrid::index(int i, int j, int k) {
+//   return i * (m_dim.y() * m_dim.z()) + j * (m_dim.z()) + k;
+// }
 
 /**
  * The cubic B-spline formulation of the grid basis function used for
@@ -26,11 +29,12 @@ float ParticleGrid::basisFunction(float x) {
   }
 }
 
-float ParticleGrid::dBasisFunction(float x) {
+float ParticleGrid::gradBasisFunction(float x) {
   if (x < 0) {
-    // TODO(kvchen): This recursive call is probably inefficient. Should we list
-    // out the additional cases? Benchmark after confirmed working.
-    return -dBasisFunction(-x);
+    // TODO(kvchen): This recursive call is probably inefficient. Should we
+    // bother listing out the additional cases? Benchmark after confirmed
+    // working.
+    return -gradBasisFunction(-x);
   } else if (x < 1) {
     return (1.5f * x - 2) * x;
   } else if (x < 2) {
@@ -38,4 +42,24 @@ float ParticleGrid::dBasisFunction(float x) {
   } else {
     return 0;
   }
+}
+
+/**
+ * Computes the weight w_{ip} used to rasterize a particle to the grid.
+ */
+float ParticleGrid::transferWeight(Eigen::Vector3i gridIdx,
+                                   Eigen::Vector3f particlePos) {
+  float invSpacing = 1.0f / m_spacing;
+  Eigen::Vector3f fractionalCellOffset =
+      invSpacing * particlePos - gridIdx.cast<float>();
+
+  float N = basisFunction(fractionalCellOffset.x()) *
+            basisFunction(fractionalCellOffset.y()) *
+            basisFunction(fractionalCellOffset.z());
+  return 1.0f;
+}
+
+float ParticleGrid::gradTransferWeight(Eigen::Vector3i gridIdx,
+                                       Eigen::Vector3f particlePos) {
+  return 1.0f;
 }

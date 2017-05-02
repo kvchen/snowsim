@@ -11,9 +11,12 @@ public:
   ~ParticleGrid(){};
 
   float basisFunction(float x);
-  float dBasisFunction(float x);
+  float gradBasisFunction(float x);
+  float transferWeight(Eigen::Vector3i gridIdx, Eigen::Vector3f particlePos);
+  float gradTransferWeight(Eigen::Vector3i gridIdx,
+                           Eigen::Vector3f particlePos);
 
-  int index(int i, int j, int k);
+  // int index(int i, int j, int k);
 
 private:
   // Grid sizing

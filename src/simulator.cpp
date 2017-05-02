@@ -19,42 +19,42 @@ using namespace SnowSimulator;
  * Particle-based body collisions (computeParticleBodyCollisions)
  * Update particle positions (updateParticlePostions)
  **/
-Simulator::advance(float timestep) {}
-
-Simulator::computeWeights() {}
-
-Simulator::rasterizeToGrid() {}
-
-Simulator::computeParticleProperties() {}
-
-Simulator::computeGridForces() {}
-
-Simulator::updateGridVelocities() {}
-
-Simulator::computeBodyCollisions() {}
-
-Simulator::solveLinearSystem() {}
-
-Simulator::updateDeformationGradient() {}
-
-/**
- * Update the particle velocities according to PIC and FLIP.
- */
-Simulator::updateParticleVelocities(float timestep, float alpha = 0.95) {
-  Eigen::Vector<float, 3, Eigen::Dynamic> picVelocities;
-  Eigen::Vector<float, 3, Eigen::Dynamic> flipVelocities;
-
-  m_materialPoints.m_velocities =
-      (1 - alpha) * picVelocities + alpha * flipVelocities;
-}
-
-Simulator::computeParticleBodyCollisions(float timestep) {}
-
-/**
- * Uses backwards Euler integration to update the particle position for each
- * timestep. At this point, the velocities should already have been updated to
- * the next timestep.
- */
-Simulator::updateParticlePositions(float timestep) {
-  m_materialPoints.m_positions += m_materialPoints.m_velocities * timestep;
-}
+// Simulator::advance(float timestep) {}
+//
+// Simulator::computeWeights() {}
+//
+// Simulator::rasterizeToGrid() {}
+//
+// Simulator::computeParticleProperties() {}
+//
+// Simulator::computeGridForces() {}
+//
+// Simulator::updateGridVelocities() {}
+//
+// Simulator::computeBodyCollisions() {}
+//
+// Simulator::solveLinearSystem() {}
+//
+// Simulator::updateDeformationGradient() {}
+//
+// /**
+//  * Update the particle velocities according to PIC and FLIP.
+//  */
+// Simulator::updateParticleVelocities(float timestep, float alpha = 0.95) {
+//   Eigen::Matrix<float, 3, Eigen::Dynamic> picVelocities;
+//   Eigen::Matrix<float, 3, Eigen::Dynamic> flipVelocities;
+//
+//   m_materialPoints.m_velocities =
+//       (1 - alpha) * picVelocities + alpha * flipVelocities;
+// }
+//
+// Simulator::computeParticleBodyCollisions(float timestep) {}
+//
+// /**
+//  * Uses backwards Euler integration to update the particle position for each
+//  * timestep. At this point, the velocities should already have been updated
+//  to * the next timestep.
+//  */
+// Simulator::updateParticlePositions(float timestep) {
+//   m_materialPoints.m_positions += m_materialPoints.m_velocities * timestep;
+// }

@@ -3,7 +3,8 @@
 
 #include <vector>
 
-#include "forceField.hpp"
+// #include "forceField.hpp"
+#include "materialPoints.hpp"
 
 namespace SnowSimulator {
 
@@ -17,7 +18,7 @@ private:
   const MaterialPoints &m_materialPoints;
 
   // vector of all force fields
-  const std::vector<ForceField> &m_forceFields;
+  // const std::vector<ForceField> &m_forceFields;
 };
 
 } // namespace SnowSimulator

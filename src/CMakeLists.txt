@@ -3,32 +3,31 @@ cmake_minimum_required(VERSION 3.5)
 # Source files
 
 set(SNOWSIM_SOURCE
-    main.cpp
+  main.cpp
 
-    # Base classes
-    collisionObject.cpp
-    forceField.cpp
-    gravityField.cpp
+  # Base classes
+  collisionObject.cpp
+  # gravityField.cpp
 
-    # Data classes
-    particleGrid.cpp
+  # Data classes
+  particleGrid.cpp
 
-    # GUI
-    renderer.cpp
-    simulator.cpp
+  # GUI
+  renderer.cpp
+  simulator.cpp
 )
 
-# embed_resources(SNOWSIM_SHADERS
-#     shaders/vert.glsl
-#     shaders/frag.glsl
-# )
+embed_resources(SNOWSIM_SHADERS
+  shaders/vert.glsl
+  shaders/frag.glsl
+)
 
 include_directories(${NANOGUI_EXTRA_INCS})
 add_definitions(${NANOGUI_EXTRA_DEFS})
 
 add_executable(snowsim ${SNOWSIM_SOURCE})
 target_link_libraries(snowsim
-    nanogui ${NANOGUI_EXTRA_LIBS}
+  nanogui ${NANOGUI_EXTRA_LIBS}
 )
 
 set(EXECUTABLE_OUTPUT_PATH ..)

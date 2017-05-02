@@ -8,9 +8,8 @@ namespace SnowSimulator {
 class ForceField {
 public:
   virtual Eigen::Vector3f force(const Eigen::Vector3f &pos, float mass) const;
-  virtual Eigen::Matrix3f dForce(const Eigen::Vector3f &pos, float mass) const;
-
-private:
+  virtual Eigen::Matrix3f gradForce(const Eigen::Vector3f &pos,
+                                    float mass) const;
 };
 
 } // namespace SnowSimulator
