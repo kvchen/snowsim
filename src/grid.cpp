@@ -91,3 +91,25 @@ float Grid::gradTransferWeight(Eigen::Vector3i gridIdx,
                                Eigen::Vector3f particlePos) {
   return 1.0f;
 }
+
+// TODO(elbertlin168): We'll definitely want to parallelize this.
+// Also might be better to associate mpoints with nodes rather than cells,
+// since we need to calculate the gradient of w_{ip} between each mpoint/node 
+// pair (unless I'm doing something stupid looping through the points).
+// Instead might try looping through every particle, then transfering to
+// nearby nodes
+// Need to define params LAMBDA0, HARDENING
+// LAMBDA0 = Young's * Poisson's / (1 + Poisson's) / (1 - 2 * Poisson's)
+void Grid::computeForces() {
+  for (std::vector<GridNode *>::iterator i1 = m_gridNodes.begin(); i1 != m_gridNodes.end(); ++i1) {
+    GridNode *curNode = *i1;
+    for (std::vector<GridCell *>::iterator i2 = curNode->m_surroundingCells.begin(); i2 != curNode->m_surroundingCells.end(); ++i2) {
+      GridCell *curCell = *i2;
+      for (std::vector<MaterialPoint *>::iterator i3 = curCell->m_materialPoints.begin(); i3 != curCell->m_materialPoints.end(); ++i3) {
+        MaterialPoint *curPoint = *i3;
+        float Jp = curPoint->defPlastic.determinant();
+        float lambda = LAMBDA0 * exp(HARDENING * (1 - Jp));
+      }
+    }
+  }
+}

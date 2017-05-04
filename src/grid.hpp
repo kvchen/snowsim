@@ -37,6 +37,8 @@ public:
 private:
   Vector3i m_idx;
   Grid *m_grid;
+  Vector3f m_velocity;
+  Vector3f m_force;
 };
 
 class Grid {
