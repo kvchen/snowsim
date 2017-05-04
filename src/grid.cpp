@@ -17,7 +17,7 @@ using namespace SnowSimulator;
  *
  * TODO(kvchen): Look into parallelizing this.
  */
-float ParticleGrid::basisFunction(float x) {
+float Grid::basisFunction(float x) {
   float absx = fabs(x);
 
   if (absx >= 2) {
@@ -29,7 +29,7 @@ float ParticleGrid::basisFunction(float x) {
   }
 }
 
-float ParticleGrid::gradBasisFunction(float x) {
+float Grid::gradBasisFunction(float x) {
   if (x < 0) {
     // TODO(kvchen): This recursive call is probably inefficient. Should we
     // bother listing out the additional cases? Benchmark after confirmed
@@ -48,8 +48,8 @@ float ParticleGrid::gradBasisFunction(float x) {
  * Computes the weight w_{ip} used to rasterize a particle to the grid. This is
  * used in steps 1, 2, 7, and 8 of the MPM procedure.
  */
-float ParticleGrid::transferWeight(Eigen::Vector3i gridIdx,
-                                   Eigen::Vector3f particlePos) {
+float Grid::transferWeight(Eigen::Vector3i gridIdx,
+                           Eigen::Vector3f particlePos) {
   float invSpacing = 1.0f / m_spacing;
   Eigen::Vector3f fractionalCellOffset =
       invSpacing * particlePos - gridIdx.cast<float>();
@@ -59,7 +59,7 @@ float ParticleGrid::transferWeight(Eigen::Vector3i gridIdx,
          basisFunction(fractionalCellOffset.z());
 }
 
-float ParticleGrid::gradTransferWeight(Eigen::Vector3i gridIdx,
-                                       Eigen::Vector3f particlePos) {
+float Grid::gradTransferWeight(Eigen::Vector3i gridIdx,
+                               Eigen::Vector3f particlePos) {
   return 1.0f;
 }

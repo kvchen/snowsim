@@ -1,11 +1,16 @@
 #ifndef MATERIALPOINTS_H
 #define MATERIALPOINTS_H
 
+#include <vector>
+
 #include "forceField.hpp"
 
 using namespace Eigen;
 
 namespace SnowSimulator {
+
+class MaterialPoint;
+class MaterialPoints;
 
 class MaterialPoint {
 public:
@@ -13,6 +18,7 @@ public:
       : m_position(position), m_velocity(velocity) {
     m_deformationGradient = Matrix3f::Identity();
   }
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   Vector3f m_position;
   Vector3f m_velocity;
@@ -20,7 +26,7 @@ public:
 
   double m_volume;
   double m_density;
-}
+};
 
 /**
  * Stores data about all the particles used in the simulation.
@@ -28,9 +34,8 @@ public:
 class MaterialPoints {
 public:
   MaterialPoints();
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  std::vector<Particle> particleSet;
+  std::vector<MaterialPoint> materialPoints;
 
   // We assume all particles have the same mass in this simulation
   double m_mass;
