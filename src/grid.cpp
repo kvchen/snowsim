@@ -98,17 +98,25 @@ float Grid::gradTransferWeight(Eigen::Vector3i gridIdx,
 // pair (unless I'm doing something stupid looping through the points).
 // Instead might try looping through every particle, then transfering to
 // nearby nodes
-// Need to define params LAMBDA0, HARDENING
+// Need to define params LAMBDA0, HARDENING, MU0
 // LAMBDA0 = Young's * Poisson's / (1 + Poisson's) / (1 - 2 * Poisson's)
+// MU0 = Young's / (2 * (1 + Poisson's))
 void Grid::computeForces() {
   for (std::vector<GridNode *>::iterator i1 = m_gridNodes.begin(); i1 != m_gridNodes.end(); ++i1) {
     GridNode *curNode = *i1;
+    curNode->m_force = Vector3f::Zero();
     for (std::vector<GridCell *>::iterator i2 = curNode->m_surroundingCells.begin(); i2 != curNode->m_surroundingCells.end(); ++i2) {
       GridCell *curCell = *i2;
       for (std::vector<MaterialPoint *>::iterator i3 = curCell->m_materialPoints.begin(); i3 != curCell->m_materialPoints.end(); ++i3) {
         MaterialPoint *curPoint = *i3;
-        float Jp = curPoint->defPlastic.determinant();
+        JacobiSVD<Matrix3f> svd(curPoint->m_defElastic, ComputeFullU | ComputeFullV);
+        float Jp = curPoint->m_defPlastic.determinant();
+        float Je = svd.singularValues().prod();
         float lambda = LAMBDA0 * exp(HARDENING * (1 - Jp));
+        float mu = MU0 * exp(HARDENING * (1 - Jp));
+        Matrix3f stress = 2 * mu * (curPoint->m_defElastic - svd.MatrixU() * svd.MatrixV().transpose()) * (curPoint->m_defElastic.transpose());
+        stress += lambda * (Je - 1) * Je * Matrix3f::Identity();
+        curNode->m_force -= curPoint->m_volume * stress * gradTransferWeight(curNode->m_idx, curPoint->m_position);
       }
     }
   }
