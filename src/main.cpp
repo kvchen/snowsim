@@ -1,9 +1,11 @@
 #include <nanogui/nanogui.h>
 #include <stdlib.h>
 
+#include "grid.hpp"
 #include "renderer.hpp"
 #include "simulator.hpp"
 
+using namespace Eigen;
 using namespace SnowSimulator;
 
 int main() {
@@ -13,9 +15,10 @@ int main() {
   {
     nanogui::Screen app({1024, 768}, "Snow Simulator");
     // Simulator simulator = Simulator(...);
+    Grid grid(Vector3f(0, 0, 0), Vector3i(10, 10, 10), 5);
 
-    // TODO(kvchen): Renderer should also be initialized here and called once
-    // per frame down below.
+    // TODO(kvchen): Renderer should also be initialized here and called
+    // once per frame down below.
 
     app.setVisible(true);
 

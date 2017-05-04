@@ -3,11 +3,39 @@
 
 #include "grid.hpp"
 
+using namespace Eigen;
 using namespace SnowSimulator;
 
-// int ParticleGrid::index(int i, int j, int k) {
-//   return i * (m_dim.y() * m_dim.z()) + j * (m_dim.z()) + k;
-// }
+GridNode::GridNode(Vector3i idx, Grid *grid) : m_idx(idx), m_grid(grid) {
+  m_surroundingCells.push_back(new GridCell(this));
+}
+
+inline Vector3i Grid::idxToVector(int idx) const {
+  return Vector3i(idx % m_dim.x(), (idx / m_dim.x()) % m_dim.y(),
+                  idx / (m_dim.x() * m_dim.y()));
+}
+
+Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
+    : m_origin(origin), m_dim(dimensions), m_spacing(spacing) {
+
+  // Allocate space for each of the gridNodes
+
+  int num_nodes = m_dim.x() * m_dim.y() * m_dim.z();
+  for (int i = 0; i < num_nodes; i++) {
+    m_gridNodes.push_back(new GridNode(idxToVector(i), this));
+  }
+
+  //
+
+  for (int i = 0; i < num_nodes; i++) {
+    for (int j = 0; j < 27; j++) {
+      // offset = Vector3i();
+      // m_gridNodes[]
+    }
+  }
+
+  // Vector3i m_bbox_min =
+}
 
 /**
  * The cubic B-spline formulation of the grid basis function used for

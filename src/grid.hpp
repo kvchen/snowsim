@@ -29,8 +29,10 @@ public:
 
 class GridNode {
 public:
-  GridNode(Vector3i idx, Grid *grid) : m_idx(idx), m_grid(grid) {}
+  GridNode(Vector3i idx, Grid *grid);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  std::vector<GridCell *> m_surroundingCells;
 
 private:
   Vector3i m_idx;
@@ -39,8 +41,7 @@ private:
 
 class Grid {
 public:
-  Grid(MaterialPoints &materialPoints, float spacing)
-      : m_materialPoints(materialPoints), m_spacing(spacing) {}
+  Grid(Vector3f origin, Vector3i dimensions, float spacing);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   // Rasterization methods
@@ -58,17 +59,19 @@ public:
   // int index(int i, int j, int k);
 
 private:
-  MaterialPoints &m_materialPoints;
+  inline Vector3i idxToVector(int idx) const;
 
-  // Grid sizing
-  Vector3i m_bbox_min;
-  Vector3i m_bbox_max;
+  // MaterialPoints &m_materialPoints;
 
+  // Grid sizing and location
+
+  Vector3f m_origin;
+  Vector3i m_dim;
   float m_spacing; // h in the paper
 
-  // Eigen::VectorXf m_masses;
-  // Eigen::VectorXf m_velocities;
-  // Eigen::VectorXf m_prevVelocities;
+  // Grid data
+
+  std::vector<GridNode *> m_gridNodes;
 };
 
 } // namespace SnowSimulator
