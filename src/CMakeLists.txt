@@ -10,16 +10,12 @@ set(SNOWSIM_SOURCE
   # gravityField.cpp
 
   # Data classes
-  particleGrid.cpp
+  grid.cpp
+  # particle.cpp
 
   # GUI
   renderer.cpp
   simulator.cpp
-)
-
-embed_resources(SNOWSIM_SHADERS
-  shaders/vert.glsl
-  shaders/frag.glsl
 )
 
 include_directories(${NANOGUI_EXTRA_INCS})

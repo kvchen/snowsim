@@ -4,6 +4,9 @@
 
 using namespace SnowSimulator;
 
+Simulator::Simulator(MaterialPoints &materialPoints)
+    : m_materialPoints(materialPoints) {}
+
 /**
  * The simulation proceeds as follows:
  *

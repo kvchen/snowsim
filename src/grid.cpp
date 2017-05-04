@@ -1,7 +1,7 @@
 #include <Eigen/Dense>
 #include <math.h>
 
-#include "particleGrid.hpp"
+#include "grid.hpp"
 
 using namespace SnowSimulator;
 
@@ -45,7 +45,8 @@ float ParticleGrid::gradBasisFunction(float x) {
 }
 
 /**
- * Computes the weight w_{ip} used to rasterize a particle to the grid.
+ * Computes the weight w_{ip} used to rasterize a particle to the grid. This is
+ * used in steps 1, 2, 7, and 8 of the MPM procedure.
  */
 float ParticleGrid::transferWeight(Eigen::Vector3i gridIdx,
                                    Eigen::Vector3f particlePos) {
@@ -53,10 +54,9 @@ float ParticleGrid::transferWeight(Eigen::Vector3i gridIdx,
   Eigen::Vector3f fractionalCellOffset =
       invSpacing * particlePos - gridIdx.cast<float>();
 
-  float N = basisFunction(fractionalCellOffset.x()) *
-            basisFunction(fractionalCellOffset.y()) *
-            basisFunction(fractionalCellOffset.z());
-  return 1.0f;
+  return basisFunction(fractionalCellOffset.x()) *
+         basisFunction(fractionalCellOffset.y()) *
+         basisFunction(fractionalCellOffset.z());
 }
 
 float ParticleGrid::gradTransferWeight(Eigen::Vector3i gridIdx,

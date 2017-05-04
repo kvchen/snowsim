@@ -11,7 +11,11 @@ int main() {
   nanogui::init();
 
   {
-    nanogui::Screen app = nanogui::Screen({1024, 768}, "Snow Simulator");
+    nanogui::Screen app({1024, 768}, "Snow Simulator");
+    // Simulator simulator = Simulator(...);
+
+    // TODO(kvchen): Renderer should also be initialized here and called once
+    // per frame down below.
 
     app.setVisible(true);
 

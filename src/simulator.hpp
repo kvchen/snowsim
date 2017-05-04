@@ -10,8 +10,8 @@ namespace SnowSimulator {
 
 class Simulator {
 public:
-  Simulator();
-  void advance(double timestep);
+  Simulator(MaterialPoints &materialPoints);
+  // void advance(double timestep);
 
 private:
   // Object storing the particle data
