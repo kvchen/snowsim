@@ -50,6 +50,7 @@ public:
 
   void rasterizeParticlesToGrid();
   void computeParticleVolumesAndDensities();
+  void computeForces();
 
   // Helper functions
 
