@@ -21,7 +21,7 @@ class Grid;
  */
 class GridCell {
 public:
-  GridCell(GridNode *gridNode) : m_gridNode(gridNode) {}
+  GridCell(GridNode *gridNode);
 
   GridNode *m_gridNode;
   std::vector<MaterialPoint *> m_materialPoints;
@@ -33,6 +33,9 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   std::vector<GridCell *> m_surroundingCells;
+
+  inline float basisFunction(float x) const;
+  inline float gradBasisFunction(float x) const;
 
 private:
   Vector3i m_idx;
@@ -51,8 +54,6 @@ public:
 
   // Helper functions
 
-  float basisFunction(float x);
-  float gradBasisFunction(float x);
   float transferWeight(Vector3i gridIdx, Vector3f particlePos);
   float gradTransferWeight(Vector3i gridIdx, Vector3f particlePos);
 
