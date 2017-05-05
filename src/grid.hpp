@@ -21,9 +21,10 @@ class Grid;
  */
 class GridCell {
 public:
-  GridCell(GridNode *gridNode);
+  // GridCell(GridNode *gridNode);
+  GridCell();
 
-  GridNode *m_gridNode;
+  // GridNode *m_gridNode;
   std::vector<MaterialPoint *> m_materialPoints;
 };
 
@@ -32,12 +33,15 @@ public:
   GridNode(Vector3i idx, Grid *grid);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  std::vector<GridCell *> m_surroundingCells;
+  float basisFunction(Vector3f particlePos) const;
+  Vector3f gradBasisFunction(Vector3f particlePos) const;
 
-  inline float basisFunction(float x) const;
-  inline float gradBasisFunction(float x) const;
+  std::vector<GridCell *> m_neighbors;
 
 private:
+  float cubicBSpline(float x) const;
+  float gradCubicBSpline(float x) const;
+
   Vector3i m_idx;
   Grid *m_grid;
 };
@@ -52,15 +56,12 @@ public:
   void rasterizeParticlesToGrid();
   void computeParticleVolumesAndDensities();
 
-  // Helper functions
-
-  float transferWeight(Vector3i gridIdx, Vector3f particlePos);
-  float gradTransferWeight(Vector3i gridIdx, Vector3f particlePos);
-
-  // int index(int i, int j, int k);
+  float m_spacing; // h in the paper
 
 private:
-  inline Vector3i idxToVector(int idx) const;
+  // Utility methods
+  inline Vector3i idxToVector(int idx);
+  inline int vectorToIdx(Vector3i idx);
 
   // MaterialPoints &m_materialPoints;
 
@@ -68,11 +69,12 @@ private:
 
   Vector3f m_origin;
   Vector3i m_dim;
-  float m_spacing; // h in the paper
 
   // Grid data
+  // the x dimension varies the fastest, followed by y and then z.
 
   std::vector<GridNode *> m_gridNodes;
+  std::vector<GridCell *> m_gridCells;
 };
 
 } // namespace SnowSimulator

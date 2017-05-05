@@ -24,6 +24,7 @@ public:
   Vector3f m_velocity;
   Matrix3f m_deformationGradient;
 
+  double m_mass;
   double m_volume;
   double m_density;
 };
@@ -36,9 +37,6 @@ public:
   MaterialPoints();
 
   std::vector<MaterialPoint> materialPoints;
-
-  // We assume all particles have the same mass in this simulation
-  double m_mass;
 };
 
 } // namespace SnowSimulator

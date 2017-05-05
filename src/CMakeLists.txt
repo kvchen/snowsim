@@ -18,6 +18,8 @@ set(SNOWSIM_SOURCE
   simulator.cpp
 )
 
+include_directories(include)
+
 include_directories(${NANOGUI_EXTRA_INCS})
 add_definitions(${NANOGUI_EXTRA_DEFS})
 

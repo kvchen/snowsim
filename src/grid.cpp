@@ -1,16 +1,27 @@
 #include <Eigen/Dense>
 #include <boost/math/special_functions/sign.hpp>
+#include <iostream>
 #include <math.h>
 
 #include "grid.hpp"
+#include "spdlog/spdlog.h"
 
 using namespace Eigen;
 using namespace SnowSimulator;
 
-GridCell::GridCell(GridNode *gridNode) : m_gridNode(gridNode) {}
+// ============================================================================
+// GRIDCELL METHODS
+// ============================================================================
+
+// GridCell::GridCell(GridNode *gridNode) : m_gridNode(gridNode) {}
+GridCell::GridCell() {}
+
+// ============================================================================
+// GRIDNODE METHODS
+// ============================================================================
 
 GridNode::GridNode(Vector3i idx, Grid *grid) : m_idx(idx), m_grid(grid) {
-  m_surroundingCells.push_back(new GridCell(this));
+  // m_surroundingCells.push_back(new GridCell(this));
 }
 
 /**
@@ -21,7 +32,7 @@ GridNode::GridNode(Vector3i idx, Grid *grid) : m_idx(idx), m_grid(grid) {
  *
  * TODO(kvchen): Look into parallelizing this.
  */
-inline float GridNode::basisFunction(float x) const {
+float GridNode::cubicBSpline(float x) const {
   float absx = fabs(x);
 
   if (absx >= 2) {
@@ -33,7 +44,7 @@ inline float GridNode::basisFunction(float x) const {
   }
 }
 
-inline float GridNode::gradBasisFunction(float x) const {
+float GridNode::gradCubicBSpline(float x) const {
   float absx = fabs(x);
   int sign = copysign(1, x);
 
@@ -46,50 +57,90 @@ inline float GridNode::gradBasisFunction(float x) const {
   }
 }
 
-inline Vector3i Grid::idxToVector(int idx) const {
+/**
+ * Computes the weight necessary for rasterizing the properties of a
+ * materialPoint to the grid. This is referred to as w in the paper.
+ */
+float GridNode::basisFunction(Vector3f particlePos) const {
+  float invSpacing = 1.0f / m_grid->m_spacing;
+  Vector3f offset = invSpacing * particlePos - m_idx.cast<float>();
+
+  return cubicBSpline(offset.x()) * cubicBSpline(offset.y()) *
+         cubicBSpline(offset.z());
+}
+
+Vector3f GridNode::gradBasisFunction(Vector3f particlePos) const {
+  float invSpacing = 1.0f / m_grid->m_spacing;
+  Vector3f offset = invSpacing * particlePos - m_idx.cast<float>();
+
+  float gx = gradCubicBSpline(offset.x()) * cubicBSpline(offset.y()) *
+             cubicBSpline(offset.z());
+  float gy = cubicBSpline(offset.x()) * gradCubicBSpline(offset.y()) *
+             cubicBSpline(offset.z());
+  float gz = cubicBSpline(offset.x()) * cubicBSpline(offset.y()) *
+             gradCubicBSpline(offset.z());
+  return invSpacing * Vector3f(gx, gy, gz);
+}
+
+// ============================================================================
+// GRID METHODS
+// ============================================================================
+
+Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
+    : m_origin(origin), m_dim(dimensions), m_spacing(spacing) {
+  auto logger = spdlog::get("snowsim");
+  int num_nodes = m_dim.x() * m_dim.y() * m_dim.z();
+
+  logger->info("Creating grid of size ({}, {}, {})", m_dim.x(), m_dim.y(),
+               m_dim.z());
+  logger->info("Total node count: {}", num_nodes);
+
+  // Allocate space for each of the gridNodes
+
+  logger->info("Allocating grid nodes and cells...");
+
+  for (int i = 0; i < num_nodes; i++) {
+    m_gridNodes.push_back(new GridNode(idxToVector(i), this));
+    m_gridCells.push_back(new GridCell());
+  }
+
+  // Make sure each GridNode has a reference to the surrounding GridCells
+  // within the support radius of the basis function.
+
+  logger->info("Linking grid nodes to neighboring cells...");
+
+  for (int i = 0; i < num_nodes; i++) {
+    for (int j = 0; j < 64; j++) {
+      Vector3i offset(j % 4 - 2, (j / 4) % 4 - 2, j / 16 - 2);
+      Vector3i offsetIdx = idxToVector(i) + offset;
+
+      if ((0 <= offsetIdx.x() && offsetIdx.x() < m_dim.x()) &&
+          (0 <= offsetIdx.y() && offsetIdx.y() < m_dim.y()) &&
+          (0 <= offsetIdx.z() && offsetIdx.z() < m_dim.z())) {
+
+        // std::cout << "------------" << std::endl;
+        // std::cout << offsetIdx << std::endl;
+        // std::cout << idxToVector(i) << std::endl;
+
+        GridNode *current = m_gridNodes[i];
+        GridCell *neighbor = m_gridCells[vectorToIdx(offsetIdx)];
+        current->m_neighbors.push_back(neighbor);
+      }
+    }
+  }
+}
+
+// void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
+//   // materialPoints
+//   // Move each material point into its respective GridCell.
+// }
+
+inline Vector3i Grid::idxToVector(int idx) {
   return Vector3i(idx % m_dim.x(), (idx / m_dim.x()) % m_dim.y(),
                   idx / (m_dim.x() * m_dim.y()));
 }
 
-Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
-    : m_origin(origin), m_dim(dimensions), m_spacing(spacing) {
-
-  // Allocate space for each of the gridNodes
-
-  int num_nodes = m_dim.x() * m_dim.y() * m_dim.z();
-  for (int i = 0; i < num_nodes; i++) {
-    m_gridNodes.push_back(new GridNode(idxToVector(i), this));
-  }
-
-  //
-
-  for (int i = 0; i < num_nodes; i++) {
-    for (int j = 0; j < 64; j++) {
-      Vector3i offset(j % 4, (j / 4) % 4, j / 16);
-      // idxToVector(i) + offset
-    }
-  }
-
-  // Vector3i m_bbox_min =
-}
-
-/**
- * Computes the weight w_{ip} used to rasterize a particle to the grid. This is
- * used in steps 1, 2, 7, and 8 of the MPM procedure.
- */
-float Grid::transferWeight(Eigen::Vector3i gridIdx,
-                           Eigen::Vector3f particlePos) {
-  float invSpacing = 1.0f / m_spacing;
-  Eigen::Vector3f fractionalCellOffset =
-      invSpacing * particlePos - gridIdx.cast<float>();
-
-  return 1.0f;
-  // return basisFunction(fractionalCellOffset.x()) *
-  //        basisFunction(fractionalCellOffset.y()) *
-  //        basisFunction(fractionalCellOffset.z());
-}
-
-float Grid::gradTransferWeight(Eigen::Vector3i gridIdx,
-                               Eigen::Vector3f particlePos) {
-  return 1.0f;
+// TODO(kvchen): FIX THIS THIS IS INCORRECT
+inline int Grid::vectorToIdx(Vector3i idx) {
+  return idx.x() + m_dim.x() * (idx.y() + m_dim.y() * idx.z());
 }
