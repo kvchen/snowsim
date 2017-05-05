@@ -11,6 +11,7 @@ namespace SnowSimulator {
 
 // Forward declarations
 
+class MaterialPoint;
 class GridCell;
 class GridNode;
 class Grid;
@@ -21,10 +22,11 @@ class Grid;
  */
 class GridCell {
 public:
-  // GridCell(GridNode *gridNode);
-  GridCell();
+  GridCell(GridNode *gridNode);
+  void addMaterialPoint(MaterialPoint *materialPoint);
+  void clear();
 
-  // GridNode *m_gridNode;
+  GridNode *m_node; // Pointer to the immediately adjacent GridNode
   std::vector<MaterialPoint *> m_materialPoints;
 };
 
@@ -33,10 +35,13 @@ public:
   GridNode(Vector3i idx, Grid *grid);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  void rasterizeMaterialPoints();
+
   float basisFunction(Vector3f particlePos) const;
   Vector3f gradBasisFunction(Vector3f particlePos) const;
 
-  std::vector<GridCell *> m_neighbors;
+  std::vector<GridNode *> m_neighbors;
+  std::vector<GridCell *> m_neighborCells;
 
 private:
   float cubicBSpline(float x) const;
@@ -44,6 +49,10 @@ private:
 
   Vector3i m_idx;
   Grid *m_grid;
+
+  // Physical properties
+  double m_mass;
+  Vector3f m_velocity;
 };
 
 class Grid {
