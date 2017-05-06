@@ -8,6 +8,7 @@
 #include "grid.hpp"
 #include "materialPoints.hpp"
 #include "snowModel.hpp"
+#include "spdlog/spdlog.h"
 
 namespace SnowSimulator {
 
@@ -33,7 +34,7 @@ private:
   MaterialPoints &m_materialPoints;
   Grid *m_grid;
 
-  // auto logger = spdlog::get("snowsim");
+  std::shared_ptr<spdlog::logger> logger;
 
   // vector of all force fields
   // const std::vector<ForceField> &m_forceFields;

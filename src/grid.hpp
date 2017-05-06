@@ -85,6 +85,13 @@ public:
 
   // Helper functions
 
+  // template <typename Lambda>
+  // void forEachActiveCell(Lambda &&f) {
+  //   for (auto &cell : m_gridCells) {
+  //
+  //   }
+  // }
+
   template <typename Lambda>
   void forEachNeighbor(MaterialPoint *particle, Lambda &&f) {
     Array3i particleIdx =
@@ -127,6 +134,8 @@ private:
 
   std::vector<GridNode *> m_gridNodes;
   std::vector<GridCell *> m_gridCells;
+
+  // std::shared_ptr<spdlog::logger> logger;
 };
 
 } // namespace SnowSimulator

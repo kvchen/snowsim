@@ -31,7 +31,7 @@ public:
 
   GridCell *m_cell;
 
-  double m_mass;
+  double m_mass = 1.0;
   double m_volume;
   double m_density;
 };
@@ -41,7 +41,7 @@ public:
  */
 class MaterialPoints {
 public:
-  MaterialPoints() {};
+  MaterialPoints(){};
 
   std::vector<MaterialPoint *> m_materialPoints;
 };

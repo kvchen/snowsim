@@ -1,4 +1,5 @@
 #include <Eigen/Dense>
+#include <assert.h>
 #include <boost/math/special_functions/sign.hpp>
 #include <iostream>
 #include <math.h>
@@ -48,6 +49,8 @@ void GridNode::rasterizeMaterialPoints() {
       m_mass += mp->m_mass * basisFunction(mp->m_position);
     }
   }
+
+  // std::cout << m_mass << std::endl;
 
   // Rasterize velocity to the grid
   if (m_mass == 0) {
@@ -224,20 +227,24 @@ std::vector<GridNode *> Grid::getAllNodes() { return m_gridNodes; }
 
 void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
   auto logger = spdlog::get("snowsim");
+
   logger->info("Clearing cells...");
   for (auto &cell : m_gridCells) {
     cell->clear();
   }
+
   logger->info("Adding material points to cells...");
   for (auto &mp : materialPoints.m_materialPoints) {
     Vector3f idx = (mp->m_position.array() / m_spacing).floor();
     int i = vectorToIdx(idx.cast<int>());
     m_gridCells[i]->addMaterialPoint(mp);
   }
+
   logger->info("Rasterizing material points to grid nodes...");
   for (auto &node : m_gridNodes) {
     node->rasterizeMaterialPoints();
   }
+
   logger->info("Finished rasterizing");
 }
 
@@ -250,13 +257,22 @@ void Grid::setInitialVolumesAndDensities(MaterialPoints &materialPoints) {
   logger->info("Setting initial volumes and densities...");
 
   for (auto const &mp : materialPoints.m_materialPoints) {
+    mp->m_volume = 0;
+    mp->m_density = 0;
+
     forEachNeighbor(mp, [mp](GridNode *node) {
       mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
     });
 
+    // std::cout << mp->m_mass << std::endl;
+
+    // assert(!std::isnan(mp->m_density));
+
     if (mp->m_density != 0) {
       mp->m_volume = mp->m_mass / mp->m_density;
     }
+
+    // assert(!std::isnan(mp->m_volume));
   }
 
   logger->info("Finished initial computation");
