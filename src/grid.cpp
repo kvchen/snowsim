@@ -215,12 +215,16 @@ Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
 //   return m_gridNodes[vectorToIdx(idx)];
 // }
 
-void Grid::computeParticleVolumesAndDensities(MaterialPoints &materialPoints) {
-  // for (auto &mp : materialPoints.m_materialPoints) {
-  //   for (auto &node : mp->cell->node->neighbors) {
-  //     mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
-  //   }
-  // }
+void Grid::setInitialVolumesAndDensities(MaterialPoints &materialPoints) {
+  for (auto &mp : materialPoints.m_materialPoints) {
+    for (auto &node : getNearbyNodes(mp, 2.0)) {
+      mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
+    }
+
+    if (mp->m_density != 0) {
+      mp->m_volume = mp->m_mass / mp->m_density;
+    }
+  }
 }
 
 void Grid::computeGridForces(MaterialPoints &materialPoints, struct SnowModel snowModel) {
