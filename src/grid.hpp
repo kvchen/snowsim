@@ -57,6 +57,8 @@ public:
 
   // Physical properties
   Vector3f m_velocity;
+  Vector3f m_nextVelocity;
+
   double m_mass;
 
 private:
@@ -67,7 +69,7 @@ private:
   Grid *m_grid;
 
   // Physical properties
-  Vector3f m_velocityChange;
+  // Vector3f m_velocityChange;
   Vector3f m_force;
 };
 

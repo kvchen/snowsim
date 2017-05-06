@@ -27,8 +27,8 @@ Simulator::Simulator(MaterialPoints &materialPoints, Grid *grid,
  * Particle-based body collisions (computeParticleBodyCollisions)
  * Update particle positions (updateParticlePostions)
  **/
-void Simulator::advance(double timestep, SnowModel snowModel) {
-  logger->info("Advancing by {}", timestep);
+void Simulator::advance(double delta_t, SnowModel snowModel) {
+  logger->info("Advancing by {}", delta_t);
 
   logger->info("Rasterizing material point data to grid");
   m_grid->rasterizeMaterialPoints(m_materialPoints);
@@ -37,17 +37,17 @@ void Simulator::advance(double timestep, SnowModel snowModel) {
   m_grid->computeGridForces(m_materialPoints, snowModel);
 
   for (auto &node : m_grid->getAllNodes()) {
-    node->explicitUpdateVelocity(timestep);
-    for (auto &co : m_colliders) {
-      node->detectCollision(co, timestep);
-    }
+    node->explicitUpdateVelocity(delta_t);
+    // for (auto &co : m_colliders) {
+    //   node->detectCollision(co, delta_t);
+    // }
   }
 
   // solveLinearSystem();
-  updateDeformationGradient(timestep, snowModel);
-  updateParticleVelocities(timestep);
-  detectParticleCollisions(timestep);
-  updateParticlePositions(timestep);
+  updateDeformationGradient(delta_t, snowModel);
+  updateParticleVelocities(delta_t);
+  detectParticleCollisions(delta_t);
+  updateParticlePositions(delta_t);
 
   stepCount++;
 }
@@ -108,70 +108,54 @@ void Simulator::firstStep() {
 //
 // Simulator::solveLinearSystem() {}
 //
-void Simulator::updateDeformationGradient(double timestep,
-                                          SnowModel snowModel) {
+void Simulator::updateDeformationGradient(double delta_t, SnowModel snowModel) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
-    Matrix3f gradVelocity = Matrix3f::Zero();
-
+    Matrix3f gradVelocity = Matrix3f::Identity();
     m_grid->forEachNeighbor(mp, [mp, &gradVelocity](GridNode *node) {
       gradVelocity += node->getVelocity() *
                       node->gradBasisFunction(mp->m_position).transpose();
     });
 
-    // for (auto &node : m_grid->getNearbyNodes(mp)) {
-    //   gradVelocity += node->getVelocity() *
-    //                   node->gradBasisFunction(mp->m_position).transpose();
-    // }
-
-    mp->m_defElastic =
-        (Matrix3f::Identity() + timestep * gradVelocity) * mp->m_defElastic;
     Matrix3f defUpdate = mp->m_defElastic * mp->m_defPlastic;
 
     JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
-    Vector3f sigma = svd.singularValues();
-    for (int i = 0; i < 3; i++) {
-      if (sigma[i] < 1 - snowModel.criticalCompression)
-        sigma[i] = 1 - snowModel.criticalCompression;
-      if (sigma[i] > 1 + snowModel.criticalStretch)
-        sigma[i] = 1 + snowModel.criticalStretch;
-    }
+    // Vector3f sv = svd.singularValues();
 
-    mp->m_defElastic =
-        svd.matrixU() * sigma.asDiagonal() * svd.matrixV().transpose();
-    mp->m_defPlastic = svd.matrixV() * sigma.asDiagonal().inverse() *
-                       svd.matrixU().transpose() * defUpdate;
+    Matrix3f sigma = svd.singularValues()
+                         .cwiseMax(1 - snowModel.criticalCompression)
+                         .cwiseMin(1 + snowModel.criticalStretch)
+                         .asDiagonal();
+
+    mp->m_defElastic = svd.matrixU() * sigma * svd.matrixV().transpose();
+    mp->m_defPlastic =
+        svd.matrixV() * sigma.inverse() * svd.matrixU().transpose() * defUpdate;
   }
 }
 
 /**
  * Update the particle velocities according to PIC and FLIP.
  */
-void Simulator::updateParticleVelocities(double timestep, float alpha) {
+void Simulator::updateParticleVelocities(double delta_t, float alpha) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
     Vector3f velocityPIC = Vector3f::Zero();
     Vector3f velocityFLIP = mp->m_velocity;
 
-    // for (auto &node : m_grid->getNearbyNodes(mp)) {
-    //   float weight = node->basisFunction(mp->m_position);
-    //   velocityPIC += node->getVelocity() * weight;
-    //   velocityFLIP += node->getVelocityChange() * weight;
-    // }
-
     m_grid->forEachNeighbor(
         mp, [mp, &velocityPIC, &velocityFLIP](GridNode *node) {
           float weight = node->basisFunction(mp->m_position);
-          velocityPIC += node->getVelocity() * weight;
-          velocityFLIP += node->getVelocityChange() * weight;
+          velocityPIC += node->m_velocity * weight;
+          velocityFLIP += (node->m_nextVelocity - node->m_velocity) * weight;
         });
 
     mp->m_velocity = (1 - alpha) * velocityPIC + alpha * velocityFLIP;
+    mp->m_velocity += Vector3f(0, -9.8, 0);
   }
 }
 
-void Simulator::detectParticleCollisions(double timestep) {
+void Simulator::detectParticleCollisions(double delta_t) {
   for (auto &co : m_colliders) {
     for (auto &mp : m_materialPoints.m_materialPoints) {
-      Vector3f position = mp->m_position + timestep * mp->m_velocity;
+      Vector3f position = mp->m_position + delta_t * mp->m_velocity;
       if (co->phi(position) <= 0) {
         Vector3f normal = co->normal(position);
         Vector3f relVelocity = mp->m_velocity - co->m_velocity;
@@ -193,15 +177,14 @@ void Simulator::detectParticleCollisions(double timestep) {
 
 /**
  * Uses backwards Euler integration to update the particle position for each
- * timestep. At this point, the velocities should already have been updated
- * to the next timestep.
+ * delta_t. At this point, the velocities should already have been updated
+ * to the next delta_t.
  */
-void Simulator::updateParticlePositions(double timestep) {
+void Simulator::updateParticlePositions(double delta_t) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
-    mp->m_position += timestep * mp->m_velocity;
-    mp->m_position = mp->m_position.array().min((m_grid->m_dim.array() - 1)
-                                                .cast<float>() *
-                                                m_grid->m_spacing);
+    mp->m_position += delta_t * mp->m_velocity;
+    mp->m_position = mp->m_position.array().min(
+        (m_grid->m_dim.array() - 1).cast<float>() * m_grid->m_spacing);
     mp->m_position = mp->m_position.cwiseMax(0);
 
     // assert(!mp->m_velocity.array().isNaN().any());

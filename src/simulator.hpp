@@ -17,15 +17,15 @@ public:
   Simulator(MaterialPoints &materialPoints, Grid *grid,
             std::vector<CollisionObject *> colliders);
 
-  void advance(double timestep, SnowModel snowModel);
+  void advance(double delta_t, SnowModel snowModel);
   void rasterizeParticlesToGrid();
 
   void firstStep();
 
-  void updateDeformationGradient(double timestep, SnowModel snowModel);
-  void updateParticleVelocities(double timestep, float alpha = 0.95);
-  void detectParticleCollisions(double timestep);
-  void updateParticlePositions(double timestep);
+  void updateDeformationGradient(double delta_t, SnowModel snowModel);
+  void updateParticleVelocities(double delta_t, float alpha = 0.95);
+  void detectParticleCollisions(double delta_t);
+  void updateParticlePositions(double delta_t);
 
   std::vector<CollisionObject *> m_colliders;
 

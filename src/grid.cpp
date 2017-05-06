@@ -35,7 +35,7 @@ void GridCell::clear() {
 
 GridNode::GridNode(Vector3i idx, Grid *grid)
     : m_idx(idx), m_grid(grid), m_mass(0), m_velocity(Vector3f::Zero()),
-      m_velocityChange(Vector3f::Zero()), m_force(Vector3f::Zero()) {
+      m_nextVelocity(Vector3f::Zero()), m_force(Vector3f::Zero()) {
   // m_surroundingCells.push_back(new GridCell(this));
 }
 
@@ -72,13 +72,16 @@ void GridNode::zeroForce() { m_force = Vector3f::Zero(); }
 void GridNode::addForce(Vector3f force) { m_force += force; }
 
 void GridNode::explicitUpdateVelocity(double delta_t) {
-  m_velocityChange = m_velocity;
+  // m_velocityChange = m_velocity;
   if (m_mass > 0) {
-    m_velocity += delta_t * m_force / m_mass;
+    m_nextVelocity = m_velocity + delta_t * m_force / m_mass;
+    // m_velocity += delta_t * m_force / m_mass;
   } else {
-    m_velocity.setZero();
+    m_nextVelocity.setZero();
   }
-  m_velocityChange = m_velocity - m_velocityChange;
+
+  m_velocity = m_nextVelocity;
+  // m_velocityChange = m_velocity - m_velocityChange;
   // std::cout << "Grid velocity\n" << m_velocity << std::endl;
 }
 
@@ -86,7 +89,7 @@ void GridNode::semiImplicitUpdateVelocity(double beta) {}
 
 Vector3f GridNode::getVelocity() { return m_velocity; }
 
-Vector3f GridNode::getVelocityChange() { return m_velocityChange; }
+// Vector3f GridNode::getVelocityChange() { return m_velocityChange; }
 
 void GridNode::detectCollision(CollisionObject *co, double delta_t) {
   Vector3f position = m_idx.cast<float>() * m_grid->m_spacing +
@@ -104,9 +107,10 @@ void GridNode::detectCollision(CollisionObject *co, double delta_t) {
             tangent + co->m_friction * magnitude * tangent / tangent.norm();
       }
     }
-    m_velocityChange = m_velocity - m_velocityChange;
-    m_velocity = relVelocity + co->m_velocity;
-    m_velocityChange = m_velocity - m_velocityChange;
+    // m_velocityChange = m_velocity - m_velocityChange;
+    m_nextVelocity = relVelocity + co->m_velocity;
+    m_velocity = m_nextVelocity;
+    // m_velocityChange = m_velocity - m_velocityChange;
   }
 }
 
@@ -283,7 +287,7 @@ void Grid::computeGridForces(MaterialPoints &materialPoints,
                              SnowModel snowModel) {
   for (auto &node : m_gridNodes) {
     node->zeroForce();
-    node->addForce(Vector3f(0, -9.8, 0));
+    // node->addForce(Vector3f(0, -9.8, 0));
   }
 
   for (auto &mp : materialPoints.m_materialPoints) {
@@ -302,8 +306,9 @@ void Grid::computeGridForces(MaterialPoints &materialPoints,
     double lambda = snowModel.initialLambda * epsilon;
 
     Matrix3f stress =
-        2 * mu * (mp->m_defElastic - Re) * mp->m_defElastic.transpose() +
-        Matrix3f::Constant(lambda * (Je - 1) * Je);
+        mp->m_defPlastic / Jp *
+        (2 * mu * (mp->m_defElastic - Re) * mp->m_defElastic.transpose() +
+         Matrix3f::Constant(lambda * (Je - 1) * Je));
 
     // Matrix3f stress =
     //     2 * snowModel.initialMu *
