@@ -200,10 +200,7 @@ Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
     // top-left corner of the GridCell.
 
     Vector3i minIdx = (idx.array() - 2).max(0);
-    Vector3i maxIdx = (idx.array() + 2).min(m_dim.array());
-
-    // Vector3i offsetDim = maxIdx - maxIdx;
-    // Vector3i numNeighboringCells = offsetDim.prod();
+    Vector3i maxIdx = (idx.array() + 1).min(m_dim.array() - 1);
 
     for (int ox = minIdx.x(); ox < maxIdx.x(); ox++) {
       for (int oy = minIdx.y(); oy < maxIdx.y(); oy++) {
@@ -253,13 +250,9 @@ void Grid::setInitialVolumesAndDensities(MaterialPoints &materialPoints) {
   logger->info("Setting initial volumes and densities...");
 
   for (auto const &mp : materialPoints.m_materialPoints) {
-    forEachNeighbor(mp, [mp](GridNode *node) {
+    forEachNeighbor(mp, [=](GridNode *node) {
       mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
     });
-    //
-    // for (auto &node : getNearbyNodes(mp, 2.0)) {
-    //   mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
-    // }
 
     if (mp->m_density != 0) {
       mp->m_volume = mp->m_mass / mp->m_density;

@@ -1,17 +1,17 @@
-#include <nanogui/nanogui.h>
-#include <stdlib.h>
 #include <math.h>
+#include <nanogui/nanogui.h>
 #include <random>
+#include <stdlib.h>
 
 #include "spdlog/spdlog.h"
 
+#include "collisionObject.hpp"
 #include "grid.hpp"
+#include "groundCO.hpp"
+#include "materialPoints.hpp"
 #include "renderer.hpp"
 #include "simulator.hpp"
 #include "snowModel.hpp"
-#include "materialPoints.hpp"
-#include "collisionObject.hpp"
-#include "groundCO.hpp"
 
 using namespace nanogui;
 using namespace Eigen;
@@ -79,7 +79,8 @@ int main() {
   auto randomRadius = std::bind(uniform, gen1);
   auto randomPos = std::bind(normal, gen2);
 
-  const int numParticles = 1000;
+  // const int numParticles = 1000;
+  const int numParticles = 3e5;
   logger->info("Generating {} random particles", numParticles);
 
   for (int i = 0; i < numParticles; i++) {
