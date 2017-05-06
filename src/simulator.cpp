@@ -1,6 +1,7 @@
 #include <Eigen/Dense>
 
 #include "simulator.hpp"
+#include "spdlog/spdlog.h"
 
 using namespace SnowSimulator;
 
@@ -146,7 +147,11 @@ void Simulator::detectParticleCollisions(double timestep) {
  * to the next timestep.
  */
 void Simulator::updateParticlePositions(double timestep) {
+  auto logger = spdlog::get("snowsim");
   for (auto &mp : m_materialPoints.m_materialPoints) {
     mp->m_position += timestep * mp->m_velocity;
+    if (!mp->m_velocity.isZero())
+      logger->info("Velocity ({}, {}, {}) should be 0",
+                   mp->m_velocity.x(), mp->m_velocity.y(), mp->m_velocity.z());
   }
 }

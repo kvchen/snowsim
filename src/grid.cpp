@@ -226,17 +226,22 @@ std::vector<GridNode *> Grid::getAllNodes() { return m_gridNodes; }
 // void Grid::computeWeights() {}
 
 void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
+  auto logger = spdlog::get("snowsim");
+  logger->info("Clearing cells...");
   for (auto &cell : m_gridCells) {
     cell->clear();
   }
+  logger->info("Adding material points to cells...");
   for (auto &mp : materialPoints.m_materialPoints) {
     Vector3f idx = (mp->m_position.array() / m_spacing).floor();
     int i = vectorToIdx(idx.cast<int>());
     m_gridCells[i]->addMaterialPoint(mp);
   }
+  logger->info("Rasterizing material points to grid nodes...");
   for (auto &node : m_gridNodes) {
     node->rasterizeMaterialPoints();
   }
+  logger->info("Finished rasterizing");
 }
 
 // inline GridNode *Grid::getNode(Vector3i idx) {
@@ -244,6 +249,8 @@ void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
 // }
 
 void Grid::setInitialVolumesAndDensities(MaterialPoints &materialPoints) {
+  auto logger = spdlog::get("snowsim");
+  logger->info("Setting initial volumes and densities...");
   for (auto &mp : materialPoints.m_materialPoints) {
     for (auto &node : getNearbyNodes(mp, 2.0)) {
       mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
@@ -253,6 +260,7 @@ void Grid::setInitialVolumesAndDensities(MaterialPoints &materialPoints) {
       mp->m_volume = mp->m_mass / mp->m_density;
     }
   }
+  logger->info("Finished initial computation");
 }
 
 void Grid::computeGridForces(MaterialPoints &materialPoints,
