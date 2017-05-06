@@ -65,17 +65,24 @@ void Simulator::updateDeformationGradient(double timestep, SnowModel snowModel) 
                        svd.matrixU().transpose() * defUpdate;
   }
 }
-//
-// /**
-//  * Update the particle velocities according to PIC and FLIP.
-//  */
-// Simulator::updateParticleVelocities(float timestep, float alpha = 0.95) {
-//   Eigen::Matrix<float, 3, Eigen::Dynamic> picVelocities;
-//   Eigen::Matrix<float, 3, Eigen::Dynamic> flipVelocities;
-//
-//   m_materialPoints.m_velocities =
-//       (1 - alpha) * picVelocities + alpha * flipVelocities;
-// }
+
+/**
+ * Update the particle velocities according to PIC and FLIP.
+ */
+void Simulator::updateParticleVelocities(double timestep, float alpha) {
+  for (auto &mp : m_materialPoints.m_materialPoints) {
+    Vector3f velocityPIC = Vector3f::Zero();
+    Vector3f velocityFLIP = mp->m_velocity;
+
+    for (auto &node : m_grid->getNearbyNodes(mp)) {
+      float weight = node->basisFunction(mp->m_position);
+      velocityPIC += node->getVelocity() * weight;
+      velocityFLIP += node->getVelocityChange() * weight;
+    }
+
+    mp->m_velocity = (1 - alpha) * velocityPIC + alpha * velocityFLIP;
+  }
+}
 //
 // Simulator::computeParticleBodyCollisions(float timestep) {}
 //

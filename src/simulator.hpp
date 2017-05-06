@@ -15,6 +15,7 @@ public:
   Simulator(MaterialPoints &materialPoints, Grid *grid);
   // void advance(double timestep);
   void updateDeformationGradient(double timestep, SnowModel snowModel);
+  void updateParticleVelocities(double timestep, float alpha = 0.95);
 
 private:
   // Object storing the particle data

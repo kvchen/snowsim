@@ -48,9 +48,12 @@ public:
   void explicitUpdateVelocity(double timestep);
   void semiImplicitUpdateVelocity(double beta);
   Vector3f getVelocity();
+  Vector3f getVelocityChange();
 
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
+
+  double m_mass;
 
 private:
   float cubicBSpline(float x) const;
@@ -60,9 +63,8 @@ private:
   Grid *m_grid;
 
   // Physical properties
-  double m_mass;
   Vector3f m_velocity;
-  Vector3f m_oldVelocity;
+  Vector3f m_velocityChange;
   Vector3f m_force;
 };
 
@@ -74,7 +76,7 @@ public:
   // Rasterization methods
 
   void rasterizeParticlesToGrid();
-  void computeParticleVolumesAndDensities(MaterialPoints &materialPoints);
+  void setInitialVolumesAndDensities(MaterialPoints &materialPoints);
   void computeGridForces(MaterialPoints &materialPoints,
                          struct SnowModel snowModel);
   std::vector<GridNode *> getNearbyNodes(MaterialPoint *particle,

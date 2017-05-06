@@ -4,10 +4,13 @@
 #include <vector>
 
 #include "forceField.hpp"
+#include "grid.hpp"
 
 using namespace Eigen;
 
 namespace SnowSimulator {
+
+class GridCell;
 
 class MaterialPoint;
 class MaterialPoints;
@@ -25,6 +28,8 @@ public:
   Vector3f m_velocity;
   Matrix3f m_defElastic;
   Matrix3f m_defPlastic;
+
+  GridCell *m_cell;
 
   double m_mass;
   double m_volume;

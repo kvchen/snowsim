@@ -34,7 +34,7 @@ void GridCell::clear() {
 
 GridNode::GridNode(Vector3i idx, Grid *grid)
     : m_idx(idx), m_grid(grid), m_mass(0), m_velocity(Vector3f::Zero()),
-      m_oldVelocity(Vector3f::Zero()), m_force(Vector3f::Zero()) {
+      m_velocityChange(Vector3f::Zero()), m_force(Vector3f::Zero()) {
   // m_surroundingCells.push_back(new GridCell(this));
 }
 
@@ -73,12 +73,13 @@ void GridNode::addForce(Vector3f force) {
 }
 
 void GridNode::explicitUpdateVelocity(double timestep) {
-  m_oldVelocity = m_velocity;
+  m_velocityChange = m_velocity;
   if (m_mass > 0) {
     m_velocity += timestep * m_force / m_mass;
   } else {
     m_velocity = Vector3f::Zero();
   }
+  m_velocityChange = m_velocity - m_velocityChange;
 }
 
 void GridNode::semiImplicitUpdateVelocity(double beta) {
@@ -87,6 +88,10 @@ void GridNode::semiImplicitUpdateVelocity(double beta) {
 
 Vector3f GridNode::getVelocity() {
   return m_velocity;
+}
+
+Vector3f GridNode::getVelocityChange() {
+  return m_velocityChange;
 }
 
 /**
