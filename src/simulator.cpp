@@ -23,11 +23,43 @@ Simulator::Simulator(MaterialPoints &materialPoints, Grid * grid,
  * Particle-based body collisions (computeParticleBodyCollisions)
  * Update particle positions (updateParticlePostions)
  **/
-// Simulator::advance(float timestep) {}
+void Simulator::firstStep() {
+  m_grid->rasterizeMaterialPoints(m_materialPoints);
+  m_grid->setInitialVolumesAndDensities(m_materialPoints);
+}
+
+void Simulator::advance(double timestep, SnowModel snowModel) {
+  m_grid->rasterizeMaterialPoints(m_materialPoints);
+  m_grid->computeGridForces(m_materialPoints, snowModel);
+  for (auto &node : m_grid->getAllNodes()) {
+    node->explicitUpdateVelocity(timestep);
+    for (auto &co : m_colliders) {
+      node->detectCollision(co, timestep);
+    }
+  }
+  // solveLinearSystem();
+  updateDeformationGradient(timestep, snowModel);
+  updateParticleVelocities(timestep);
+  detectParticleCollisions(timestep);
+  updateParticlePositions(timestep);
+}
 //
 // Simulator::computeWeights() {}
 //
-// Simulator::rasterizeToGrid() {}
+// void Simulator::rasterizeToGrid() {
+//   std::vector<GridCell *> cells = m_grid->getGridCells();
+//   for (auto &cell : cells) {
+//     cell->clear();
+//   }
+//   for (auto &mp : m_materialPoints.m_materialPoints) {
+//     Vector3f idx = (mp->m_position / m_grid->m_spacing).floor();
+//     GridCell *cell = cells[m_grid->vectorToIdx(idx)];
+//     cell->addMaterialPoint(mp);
+//   }
+//   for (auto &node : m_grid->getAllNodes()) {
+//     node->rasterizeMaterialPoints();
+//   }
+// }
 //
 // Simulator::computeParticleProperties() {}
 //
@@ -86,27 +118,26 @@ void Simulator::updateParticleVelocities(double timestep, float alpha) {
 }
 
 void Simulator::detectParticleCollisions(double timestep) {
-  // {
-  //   Vector3f position = m_idx.cast<float>() * m_grid->m_spacing +
-  //                       m_grid->m_origin + timestep * m_velocity;
-  //   if (co->phi(position) <= 0) {
-  //     Vector3f normal = co->normal(position);
-  //     Vector3f relVelocity = m_velocity - co->m_velocity;
-  //     double magnitude = relVelocity.transpose() * normal;
-  //     if (magnitude < 0) {
-  //       Vector3f tangent = relVelocity - normal * magnitude;
-  //       if (tangent.norm() <= -co->m_friction * magnitude) {
-  //         relVelocity.setZero();
-  //       } else {
-  //         relVelocity = tangent +
-  //                       co->m_friction * magnitude * tangent / tangent.norm();
-  //       }
-  //     }
-  //     m_velocityChange = m_velocity - m_velocityChange;
-  //     m_velocity = relVelocity + co->m_velocity;
-  //     m_velocityChange = m_velocity - m_velocityChange;
-  //   }
-  // }
+  for (auto &co : m_colliders) {
+    for (auto &mp : m_materialPoints.m_materialPoints) {
+      Vector3f position = mp->m_position + timestep * mp->m_velocity;
+      if (co->phi(position) <= 0) {
+        Vector3f normal = co->normal(position);
+        Vector3f relVelocity = mp->m_velocity - co->m_velocity;
+        double magnitude = relVelocity.transpose() * normal;
+        if (magnitude < 0) {
+          Vector3f tangent = relVelocity - normal * magnitude;
+          if (tangent.norm() <= -co->m_friction * magnitude) {
+            relVelocity.setZero();
+          } else {
+            relVelocity = tangent +
+                          co->m_friction * magnitude * tangent / tangent.norm();
+          }
+        }
+        mp->m_velocity = relVelocity + co->m_velocity;
+      }
+    }
+  }
 }
 
 /**

@@ -14,7 +14,8 @@ namespace SnowSimulator {
 class Simulator {
 public:
   Simulator(MaterialPoints &materialPoints, Grid *grid, std::vector<CollisionObject *> colliders);
-  // void advance(double timestep);
+  void firstStep();
+  void advance(double timestep, SnowModel snowModel);
   void updateDeformationGradient(double timestep, SnowModel snowModel);
   void updateParticleVelocities(double timestep, float alpha = 0.95);
   void detectParticleCollisions(double timestep);

@@ -78,12 +78,13 @@ public:
 
   // Rasterization methods
 
-  void rasterizeParticlesToGrid();
+  void rasterizeMaterialPoints(MaterialPoints &materialPoints);
   void setInitialVolumesAndDensities(MaterialPoints &materialPoints);
   void computeGridForces(MaterialPoints &materialPoints,
                          struct SnowModel snowModel);
   std::vector<GridNode *> getNearbyNodes(MaterialPoint *particle,
                                          double radius = 2.0);
+  std::vector<GridNode *> getAllNodes();
 
   // Grid sizing and location
 

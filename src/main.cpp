@@ -77,19 +77,22 @@ int main() {
   std::uniform_real_distribution<double> uniform(0.0, 1.0);
   std::normal_distribution<double> normal(0.0, 1.0);
   auto randomRadius = std::bind(uniform, gen1);
-  auto randomPos = std::bind(uniform, gen2);
+  auto randomPos = std::bind(normal, gen2);
 
   const int numParticles = 3.0e5;
   logger->info("Generating {} random particles", numParticles);
+
   for (int i = 0; i < numParticles; i++) {
     double u = randomRadius();
     double x = randomPos();
     double y = randomPos();
     double z = randomPos();
-    u = 10 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
-    Vector3f pos;
-    pos << u * x + 10, u * y + 10, u * z + 10;
+
+    u = 5 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
+
+    Vector3f pos(u * x + 10, u * y + 10, u * z + 10);
     Vector3f velocity = Vector3f::Zero();
+
     points.m_materialPoints.push_back(new MaterialPoint(pos, velocity));
   }
 

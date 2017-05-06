@@ -217,16 +217,27 @@ Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
   }
 }
 
+std::vector<GridNode *> Grid::getAllNodes() { return m_gridNodes; }
+
 /**
  * Uses the grid basis function to computes the weighting factor for each pair
  * of particle and grid cell.
  */
 // void Grid::computeWeights() {}
 
-// void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
-//   // materialPoints
-//   // Move each material point into its respective GridCell.
-// }
+void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
+  for (auto &cell : m_gridCells) {
+    cell->clear();
+  }
+  for (auto &mp : materialPoints.m_materialPoints) {
+    Vector3f idx = (mp->m_position.array() / m_spacing).floor();
+    int i = vectorToIdx(idx);
+    m_gridCells[i]->addMaterialPoint(mp);
+  }
+  for (auto &node : m_gridNodes) {
+    node->rasterizeMaterialPoints();
+  }
+}
 
 // inline GridNode *Grid::getNode(Vector3i idx) {
 //   return m_gridNodes[vectorToIdx(idx)];
