@@ -231,7 +231,7 @@ void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
   }
   for (auto &mp : materialPoints.m_materialPoints) {
     Vector3f idx = (mp->m_position.array() / m_spacing).floor();
-    int i = vectorToIdx(idx);
+    int i = vectorToIdx(idx.cast<int>());
     m_gridCells[i]->addMaterialPoint(mp);
   }
   for (auto &node : m_gridNodes) {

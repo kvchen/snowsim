@@ -25,7 +25,7 @@ public:
 
 private:
   // Object storing the particle data
-  const MaterialPoints &m_materialPoints;
+  MaterialPoints &m_materialPoints;
   Grid *m_grid;
 
   // vector of all force fields
