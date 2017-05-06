@@ -65,23 +65,23 @@ void Renderer::render() {
   m_snowShader.setUniform("modelViewProjection", modelViewProjection);
   m_snowShader.setUniform("in_color", Color(1.0f, 1.0f, 1.0f, 1.0f));
 
-  // int numParticles = m_materialPoints.size();
-  // MatrixXf positions(3, numParticles);
-  //
-  // for (int i = 0; i < numParticles; i++) {
-  //   positions.col(i) = m_materialPoints[i].m_position;
-  // }
+  int numParticles = m_materialPoints.m_materialPoints.size();
+  MatrixXf positions(3, numParticles);
 
-  MatrixXf positions(3, 1000);
-  int idx = 0;
-
-  for (int i = 0; i < 10; i++) {
-    for (int j = 0; j < 10; j++) {
-      for (int k = 0; k < 10; k++) {
-        positions.col(idx++) << i, j, k;
-      }
-    }
+  for (int i = 0; i < numParticles; i++) {
+    positions.col(i) = m_materialPoints.m_materialPoints[i]->m_position;
   }
+
+  // MatrixXf positions(3, 1000);
+  // int idx = 0;
+  //
+  // for (int i = 0; i < 10; i++) {
+  //   for (int j = 0; j < 10; j++) {
+  //     for (int k = 0; k < 10; k++) {
+  //       positions.col(idx++) << i, j, k;
+  //     }
+  //   }
+  // }
 
   m_snowShader.uploadAttrib("in_position", positions);
   m_snowShader.drawArray(GL_POINTS, 0, 1000);
