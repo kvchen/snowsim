@@ -47,6 +47,7 @@ public:
   void addForce(Vector3f force);
   void explicitUpdateVelocity(double timestep);
   void semiImplicitUpdateVelocity(double beta);
+  Vector3f getVelocity();
 
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;

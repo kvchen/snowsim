@@ -25,6 +25,6 @@ struct SnowModel {
         }
 };
 
-}
+} // namespace SnowSimulator
 
 #endif // SNOWMODEL_H

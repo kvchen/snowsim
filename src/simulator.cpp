@@ -4,8 +4,8 @@
 
 using namespace SnowSimulator;
 
-Simulator::Simulator(MaterialPoints &materialPoints)
-    : m_materialPoints(materialPoints) {}
+Simulator::Simulator(MaterialPoints &materialPoints, Grid * grid)
+    : m_materialPoints(materialPoints), m_grid(grid) {}
 
 /**
  * The simulation proceeds as follows:
@@ -38,7 +38,33 @@ Simulator::Simulator(MaterialPoints &materialPoints)
 //
 // Simulator::solveLinearSystem() {}
 //
-// Simulator::updateDeformationGradient() {}
+void Simulator::updateDeformationGradient(double timestep, SnowModel snowModel) {
+  for (auto &mp : m_materialPoints.m_materialPoints) {
+    Matrix3f gradVelocity = Matrix3f::Zero();
+    for (auto &node : m_grid->getNearbyNodes(mp)) {
+      gradVelocity += node->getVelocity() *
+                      node->gradBasisFunction(mp->m_position).transpose();
+    }
+
+    mp->m_defElastic = (Matrix3f::Identity() + timestep * gradVelocity) *
+                       mp->m_defElastic;
+    Matrix3f defUpdate = mp->m_defElastic * mp->m_defPlastic;
+
+    JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
+    Vector3f sigma = svd.singularValues();
+    for (int i = 0; i < 3; i++) {
+      if (sigma[i] > 1 - snowModel.criticalCompression)
+        sigma[i] = 1 - snowModel.criticalCompression;
+      if (sigma[i] < 1 + snowModel.criticalStretch)
+        sigma[i] = 1 + snowModel.criticalStretch;
+    }
+
+    mp->m_defElastic = svd.matrixU() * sigma.asDiagonal() *
+                       svd.matrixV().transpose();
+    mp->m_defPlastic = svd.matrixV() * sigma.asDiagonal().inverse() *
+                       svd.matrixU().transpose() * defUpdate;
+  }
+}
 //
 // /**
 //  * Update the particle velocities according to PIC and FLIP.

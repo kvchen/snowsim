@@ -5,17 +5,21 @@
 
 // #include "forceField.hpp"
 #include "materialPoints.hpp"
+#include "snowModel.hpp"
+#include "grid.hpp"
 
 namespace SnowSimulator {
 
 class Simulator {
 public:
-  Simulator(MaterialPoints &materialPoints);
+  Simulator(MaterialPoints &materialPoints, Grid *grid);
   // void advance(double timestep);
+  void updateDeformationGradient(double timestep, SnowModel snowModel);
 
 private:
   // Object storing the particle data
   const MaterialPoints &m_materialPoints;
+  Grid *m_grid;
 
   // vector of all force fields
   // const std::vector<ForceField> &m_forceFields;

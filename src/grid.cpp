@@ -85,6 +85,10 @@ void GridNode::semiImplicitUpdateVelocity(double beta) {
 
 }
 
+Vector3f GridNode::getVelocity() {
+  return m_velocity;
+}
+
 /**
  * The cubic B-spline formulation of the grid basis function used for
  * determining how particle properties are transferred to the grid. Both
