@@ -46,16 +46,16 @@ public:
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
 
+  // Physical properties
+  Vector3f m_velocity;
+  double m_mass;
+
 private:
   float cubicBSpline(float x) const;
   float gradCubicBSpline(float x) const;
 
   Vector3i m_idx;
   Grid *m_grid;
-
-  // Physical properties
-  double m_mass;
-  Vector3f m_velocity;
 };
 
 class Grid {
@@ -66,10 +66,14 @@ public:
   // Rasterization methods
 
   void rasterizeParticlesToGrid();
-  void computeParticleVolumesAndDensities(MaterialPoints &materialPoints);
+  void setInitialVolumesAndDensities(MaterialPoints &materialPoints);
   std::vector<GridNode *> getNearbyNodes(MaterialPoint *particle,
                                          double radius = 2.0);
 
+  // Grid sizing and location
+
+  Vector3f m_origin;
+  Vector3i m_dim;
   float m_spacing; // h in the paper
 
 private:
@@ -78,11 +82,6 @@ private:
   inline int vectorToIdx(Vector3i idx);
 
   // MaterialPoints &m_materialPoints;
-
-  // Grid sizing and location
-
-  Vector3f m_origin;
-  Vector3i m_dim;
 
   // Grid data
   // the x dimension varies the fastest, followed by y and then z.

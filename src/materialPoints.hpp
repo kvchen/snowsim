@@ -73,7 +73,7 @@ public:
  */
 class MaterialPoints {
 public:
-  MaterialPoints();
+  MaterialPoints(){};
 
   std::vector<MaterialPoint *> m_materialPoints;
 };

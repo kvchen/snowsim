@@ -14,6 +14,7 @@ set(SNOWSIM_SOURCE
   # particle.cpp
 
   # GUI
+  camera.cpp
   renderer.cpp
   simulator.cpp
 )
