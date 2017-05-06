@@ -79,6 +79,7 @@ void GridNode::explicitUpdateVelocity(double timestep) {
     m_velocity = Vector3f::Zero();
   }
   m_velocityChange = m_velocity - m_velocityChange;
+  // std::cout << "Grid velocity\n" << m_velocity << std::endl;
 }
 
 void GridNode::semiImplicitUpdateVelocity(double beta) {}
@@ -282,13 +283,15 @@ void Grid::computeGridForces(MaterialPoints &materialPoints,
                              SnowModel snowModel) {
   for (auto &node : m_gridNodes) {
     node->zeroForce();
+    node->addForce(Vector3f(0, -9.8, 0));
   }
 
   for (auto &mp : materialPoints.m_materialPoints) {
     JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
 
     double Jp = mp->m_defPlastic.determinant();
-    double Je = svd.singularValues().prod();
+    // double Je = svd.singularValues().prod();
+    double Je = mp->m_defElastic.determinant();
 
     Matrix3f stress =
         2 * snowModel.initialMu *

@@ -94,17 +94,15 @@ int main() {
 
     u = 5 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 
-    Vector3f pos(u * x + 10, u * y + 10, u * z + 10);
+    Vector3f pos(u * x + 10, u * y + 50, u * z + 10);
     Vector3f velocity = Vector3f::Zero();
 
     points.m_materialPoints.push_back(new MaterialPoint(pos, velocity));
   }
 
-  Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
+  Grid grid(Vector3f(0, 0, 0), Vector3i(100, 300, 100), 0.2);
   Simulator simulator(points, &grid, colliders);
   simulator.firstStep();
-  simulator.advance(1.0, snowModel);
-  logger->info("Advancing 1 frame...");
 
   renderer = new Renderer(*screen, grid, points);
 
@@ -117,6 +115,8 @@ int main() {
 
   while (!glfwWindowShouldClose(screen->glfwWindow())) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+    simulator.advance(1.0f / 60, snowModel);
 
     renderer->render();
     screen->drawWidgets();

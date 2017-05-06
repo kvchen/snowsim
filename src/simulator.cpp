@@ -1,4 +1,5 @@
 #include <Eigen/Dense>
+#include <iostream>
 
 #include "simulator.hpp"
 #include "spdlog/spdlog.h"
@@ -123,9 +124,9 @@ void Simulator::updateDeformationGradient(double timestep,
     JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
     Vector3f sigma = svd.singularValues();
     for (int i = 0; i < 3; i++) {
-      if (sigma[i] > 1 - snowModel.criticalCompression)
+      if (sigma[i] < 1 - snowModel.criticalCompression)
         sigma[i] = 1 - snowModel.criticalCompression;
-      if (sigma[i] < 1 + snowModel.criticalStretch)
+      if (sigma[i] > 1 + snowModel.criticalStretch)
         sigma[i] = 1 + snowModel.criticalStretch;
     }
 
@@ -192,6 +193,10 @@ void Simulator::detectParticleCollisions(double timestep) {
 void Simulator::updateParticlePositions(double timestep) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
     mp->m_position += timestep * mp->m_velocity;
+    mp->m_position = mp->m_position.array().min((m_grid->m_dim.array() - 1)
+                                                .cast<float>() *
+                                                m_grid->m_spacing);
+    mp->m_position = mp->m_position.cwiseMax(0);
 
     // assert(!mp->m_velocity.array().isNaN().any());
 
