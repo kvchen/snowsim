@@ -250,7 +250,7 @@ void Grid::setInitialVolumesAndDensities(MaterialPoints &materialPoints) {
   logger->info("Setting initial volumes and densities...");
 
   for (auto const &mp : materialPoints.m_materialPoints) {
-    forEachNeighbor(mp, [=](GridNode *node) {
+    forEachNeighbor(mp, [mp](GridNode *node) {
       mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
     });
 
@@ -283,56 +283,8 @@ void Grid::computeGridForces(MaterialPoints &materialPoints,
     stress *= exp(snowModel.hardeningCoefficient * (1 - Jp));
     Matrix3f force = -mp->m_volume * stress;
 
-    for (auto &node : getNearbyNodes(mp)) {
+    forEachNeighbor(mp, [force, mp](GridNode *node) {
       node->addForce(force * node->gradBasisFunction(mp->m_position));
-    }
+    });
   }
-}
-
-template <typename Lambda>
-void Grid::forEachNeighbor(MaterialPoint *particle, Lambda &&f) {
-  Array3i particleIdx =
-      (particle->m_position.array() / m_spacing).floor().cast<int>();
-  Array3i min = (particleIdx - 1).max(0);
-  Array3i max = (particleIdx + 2).min(m_dim.array() - 1);
-
-  for (int x = min.x(); x < max.x(); x++) {
-    for (int y = min.y(); y < max.y(); y++) {
-      for (int z = min.z(); z < max.z(); z++) {
-        int neighborIdx = vectorToIdx(Vector3i(x, y, z));
-        f(m_gridNodes[neighborIdx]);
-      }
-    }
-  }
-}
-
-std::vector<GridNode *> Grid::getNearbyNodes(MaterialPoint *particle,
-                                             double radius) {
-  Vector3f min =
-      (particle->m_position.array() / m_spacing - radius).ceil().max(0);
-
-  Vector3f max = (particle->m_position.array() / m_spacing + radius)
-                     .floor()
-                     .max(m_dim.array().cast<float>());
-  std::vector<GridNode *> nearbyNodes;
-
-  for (int x = min.x(); x < max.x(); x++) {
-    for (int y = min.y(); y < max.y(); y++) {
-      for (int z = min.z(); z < max.z(); z++) {
-        int idx = vectorToIdx(Vector3i(x, y, z));
-        nearbyNodes.push_back(m_gridNodes[idx]);
-      }
-    }
-  }
-
-  return nearbyNodes;
-}
-
-inline Vector3i Grid::idxToVector(int idx) {
-  return Vector3i(idx % m_dim.x(), (idx / m_dim.x()) % m_dim.y(),
-                  idx / (m_dim.x() * m_dim.y()));
-}
-
-inline int Grid::vectorToIdx(const Vector3i &idx) {
-  return idx.x() + m_dim.x() * (idx.y() + m_dim.y() * idx.z());
 }

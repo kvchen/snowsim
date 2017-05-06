@@ -5,7 +5,7 @@
 
 using namespace SnowSimulator;
 
-Simulator::Simulator(MaterialPoints &materialPoints, Grid * grid,
+Simulator::Simulator(MaterialPoints &materialPoints, Grid *grid,
                      std::vector<CollisionObject *> colliders)
     : m_materialPoints(materialPoints), m_grid(grid), m_colliders(colliders) {}
 
@@ -24,26 +24,56 @@ Simulator::Simulator(MaterialPoints &materialPoints, Grid * grid,
  * Particle-based body collisions (computeParticleBodyCollisions)
  * Update particle positions (updateParticlePostions)
  **/
-void Simulator::firstStep() {
-  m_grid->rasterizeMaterialPoints(m_materialPoints);
-  m_grid->setInitialVolumesAndDensities(m_materialPoints);
-}
-
 void Simulator::advance(double timestep, SnowModel snowModel) {
+  auto logger = spdlog::get("snowsim");
+  logger->info("Advancing by {}", timestep);
+
+  logger->info("Rasterizing material point data to grid");
   m_grid->rasterizeMaterialPoints(m_materialPoints);
+
+  logger->info("Computing grid forces");
   m_grid->computeGridForces(m_materialPoints, snowModel);
+
   for (auto &node : m_grid->getAllNodes()) {
     node->explicitUpdateVelocity(timestep);
     for (auto &co : m_colliders) {
       node->detectCollision(co, timestep);
     }
   }
+
   // solveLinearSystem();
   updateDeformationGradient(timestep, snowModel);
   updateParticleVelocities(timestep);
   detectParticleCollisions(timestep);
   updateParticlePositions(timestep);
 }
+
+void Simulator::rasterizeParticlesToGrid() {}
+
+// void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
+//   auto logger = spdlog::get("snowsim");
+//   logger->info("Clearing cells...");
+//   for (auto &cell : m_gridCells) {
+//     cell->clear();
+//   }
+//   logger->info("Adding material points to cells...");
+//   for (auto &mp : materialPoints.m_materialPoints) {
+//     Vector3f idx = (mp->m_position.array() / m_spacing).floor();
+//     int i = vectorToIdx(idx.cast<int>());
+//     m_gridCells[i]->addMaterialPoint(mp);
+//   }
+//   logger->info("Rasterizing material points to grid nodes...");
+//   for (auto &node : m_gridNodes) {
+//     node->rasterizeMaterialPoints();
+//   }
+//   logger->info("Finished rasterizing");
+// }
+
+void Simulator::firstStep() {
+  m_grid->rasterizeMaterialPoints(m_materialPoints);
+  m_grid->setInitialVolumesAndDensities(m_materialPoints);
+}
+
 //
 // Simulator::computeWeights() {}
 //
@@ -72,16 +102,23 @@ void Simulator::advance(double timestep, SnowModel snowModel) {
 //
 // Simulator::solveLinearSystem() {}
 //
-void Simulator::updateDeformationGradient(double timestep, SnowModel snowModel) {
+void Simulator::updateDeformationGradient(double timestep,
+                                          SnowModel snowModel) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
     Matrix3f gradVelocity = Matrix3f::Zero();
-    for (auto &node : m_grid->getNearbyNodes(mp)) {
+
+    m_grid->forEachNeighbor(mp, [mp, &gradVelocity](GridNode *node) {
       gradVelocity += node->getVelocity() *
                       node->gradBasisFunction(mp->m_position).transpose();
-    }
+    });
 
-    mp->m_defElastic = (Matrix3f::Identity() + timestep * gradVelocity) *
-                       mp->m_defElastic;
+    // for (auto &node : m_grid->getNearbyNodes(mp)) {
+    //   gradVelocity += node->getVelocity() *
+    //                   node->gradBasisFunction(mp->m_position).transpose();
+    // }
+
+    mp->m_defElastic =
+        (Matrix3f::Identity() + timestep * gradVelocity) * mp->m_defElastic;
     Matrix3f defUpdate = mp->m_defElastic * mp->m_defPlastic;
 
     JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
@@ -93,8 +130,8 @@ void Simulator::updateDeformationGradient(double timestep, SnowModel snowModel) 
         sigma[i] = 1 + snowModel.criticalStretch;
     }
 
-    mp->m_defElastic = svd.matrixU() * sigma.asDiagonal() *
-                       svd.matrixV().transpose();
+    mp->m_defElastic =
+        svd.matrixU() * sigma.asDiagonal() * svd.matrixV().transpose();
     mp->m_defPlastic = svd.matrixV() * sigma.asDiagonal().inverse() *
                        svd.matrixU().transpose() * defUpdate;
   }
@@ -108,11 +145,18 @@ void Simulator::updateParticleVelocities(double timestep, float alpha) {
     Vector3f velocityPIC = Vector3f::Zero();
     Vector3f velocityFLIP = mp->m_velocity;
 
-    for (auto &node : m_grid->getNearbyNodes(mp)) {
-      float weight = node->basisFunction(mp->m_position);
-      velocityPIC += node->getVelocity() * weight;
-      velocityFLIP += node->getVelocityChange() * weight;
-    }
+    // for (auto &node : m_grid->getNearbyNodes(mp)) {
+    //   float weight = node->basisFunction(mp->m_position);
+    //   velocityPIC += node->getVelocity() * weight;
+    //   velocityFLIP += node->getVelocityChange() * weight;
+    // }
+
+    m_grid->forEachNeighbor(
+        mp, [mp, &velocityPIC, &velocityFLIP](GridNode *node) {
+          float weight = node->basisFunction(mp->m_position);
+          velocityPIC += node->getVelocity() * weight;
+          velocityFLIP += node->getVelocityChange() * weight;
+        });
 
     mp->m_velocity = (1 - alpha) * velocityPIC + alpha * velocityFLIP;
   }
@@ -131,8 +175,8 @@ void Simulator::detectParticleCollisions(double timestep) {
           if (tangent.norm() <= -co->m_friction * magnitude) {
             relVelocity.setZero();
           } else {
-            relVelocity = tangent +
-                          co->m_friction * magnitude * tangent / tangent.norm();
+            relVelocity =
+                tangent + co->m_friction * magnitude * tangent / tangent.norm();
           }
         }
         mp->m_velocity = relVelocity + co->m_velocity;
@@ -151,7 +195,7 @@ void Simulator::updateParticlePositions(double timestep) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
     mp->m_position += timestep * mp->m_velocity;
     if (!mp->m_velocity.isZero())
-      logger->info("Velocity ({}, {}, {}) should be 0",
-                   mp->m_velocity.x(), mp->m_velocity.y(), mp->m_velocity.z());
+      logger->info("Velocity ({}, {}, {}) should be 0", mp->m_velocity.x(),
+                   mp->m_velocity.y(), mp->m_velocity.z());
   }
 }

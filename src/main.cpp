@@ -2,6 +2,7 @@
 #include <nanogui/nanogui.h>
 #include <random>
 #include <stdlib.h>
+#include <typeinfo>
 
 #include "spdlog/spdlog.h"
 
@@ -82,6 +83,8 @@ int main() {
   // const int numParticles = 1000;
   const int numParticles = 3e5;
   logger->info("Generating {} random particles", numParticles);
+
+  std::cout << typeid(logger).name() << '\n';
 
   for (int i = 0; i < numParticles; i++) {
     double u = randomRadius();

@@ -83,11 +83,25 @@ public:
   void computeGridForces(MaterialPoints &materialPoints,
                          struct SnowModel snowModel);
 
-  template <typename Func>
-  void forEachNeighbor(MaterialPoint *particle, Func &&f);
+  // Helper functions
 
-  std::vector<GridNode *> getNearbyNodes(MaterialPoint *particle,
-                                         double radius = 2.0);
+  template <typename Lambda>
+  void forEachNeighbor(MaterialPoint *particle, Lambda &&f) {
+    Array3i particleIdx =
+        (particle->m_position.array() / m_spacing).floor().cast<int>();
+    Array3i min = (particleIdx - 1).max(0);
+    Array3i max = (particleIdx + 2).min(m_dim.array() - 1);
+
+    for (int x = min.x(); x < max.x(); x++) {
+      for (int y = min.y(); y < max.y(); y++) {
+        for (int z = min.z(); z < max.z(); z++) {
+          int neighborIdx = vectorToIdx(Vector3i(x, y, z));
+          f(m_gridNodes[neighborIdx]);
+        }
+      }
+    }
+  }
+
   std::vector<GridNode *> getAllNodes();
 
   // Grid sizing and location
@@ -98,8 +112,15 @@ public:
 
 private:
   // Utility methods
-  inline Vector3i idxToVector(int idx);
-  inline int vectorToIdx(const Vector3i &idx);
+
+  inline Vector3i idxToVector(int idx) {
+    return Vector3i(idx % m_dim.x(), (idx / m_dim.x()) % m_dim.y(),
+                    idx / (m_dim.x() * m_dim.y()));
+  }
+
+  inline int vectorToIdx(const Vector3i &idx) {
+    return idx.x() + m_dim.x() * (idx.y() + m_dim.y() * idx.z());
+  }
 
   // Grid data
   // the x dimension varies the fastest, followed by y and then z.
