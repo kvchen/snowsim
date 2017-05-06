@@ -33,7 +33,8 @@ void GridCell::clear() {
 // ============================================================================
 
 GridNode::GridNode(Vector3i idx, Grid *grid)
-    : m_idx(idx), m_grid(grid), m_mass(0), m_velocity(Vector3f::Zero()) {
+    : m_idx(idx), m_grid(grid), m_mass(0), m_velocity(Vector3f::Zero()),
+      m_oldVelocity(Vector3f::Zero()), m_force(Vector3f::Zero()) {
   // m_surroundingCells.push_back(new GridCell(this));
 }
 
@@ -61,6 +62,27 @@ void GridNode::rasterizeMaterialPoints() {
 
     m_velocity /= m_mass;
   }
+}
+
+void GridNode::zeroForce() {
+  m_force = Vector3f::Zero();
+}
+
+void GridNode::addForce(Vector3f force) {
+  m_force += force;
+}
+
+void GridNode::explicitUpdateVelocity(double timestep) {
+  m_oldVelocity = m_velocity;
+  if (m_mass > 0) {
+    m_velocity += timestep * m_force / m_mass;
+  } else {
+    m_velocity = Vector3f::Zero();
+  }
+}
+
+void GridNode::semiImplicitUpdateVelocity(double beta) {
+
 }
 
 /**
@@ -195,6 +217,25 @@ void Grid::computeParticleVolumesAndDensities(MaterialPoints &materialPoints) {
   //     mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
   //   }
   // }
+}
+
+void Grid::computeGridForces(MaterialPoints &materialPoints, struct SnowModel snowModel) {
+  for (auto &node : m_gridNodes) {
+    node->zeroForce();
+  }
+  for (auto &mp : materialPoints.m_materialPoints) {
+    JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
+    double Jp = mp->m_defPlastic.determinant();
+    double Je = svd.singularValues().prod();
+    Matrix3f stress = 2 * snowModel.initialMu * (mp->m_defElastic -
+      svd.matrixU() * svd.matrixV().transpose()) * (mp->m_defElastic.transpose());
+    stress += snowModel.initialLambda * (Je - 1) * Je * Matrix3f::Identity();
+    stress *= exp(snowModel.hardeningCoefficient * (1 - Jp));
+    Matrix3f force = -mp->m_volume * stress;
+    for (auto &node : getNearbyNodes(mp)) {
+      node->addForce(force * node->gradBasisFunction(mp->m_position));
+    }
+  }
 }
 
 std::vector<GridNode *> Grid::getNearbyNodes(MaterialPoint *particle,

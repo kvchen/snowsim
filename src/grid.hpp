@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 
 #include "materialPoints.hpp"
+#include "snowModel.hpp"
 
 using namespace Eigen;
 
@@ -42,6 +43,10 @@ public:
 
   float basisFunction(Vector3f particlePos) const;
   Vector3f gradBasisFunction(Vector3f particlePos) const;
+  void zeroForce();
+  void addForce(Vector3f force);
+  void explicitUpdateVelocity(double timestep);
+  void semiImplicitUpdateVelocity(double beta);
 
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
@@ -56,6 +61,8 @@ private:
   // Physical properties
   double m_mass;
   Vector3f m_velocity;
+  Vector3f m_oldVelocity;
+  Vector3f m_force;
 };
 
 class Grid {
@@ -67,6 +74,8 @@ public:
 
   void rasterizeParticlesToGrid();
   void computeParticleVolumesAndDensities(MaterialPoints &materialPoints);
+  void computeGridForces(MaterialPoints &materialPoints,
+                         struct SnowModel snowModel);
   std::vector<GridNode *> getNearbyNodes(MaterialPoint *particle,
                                          double radius = 2.0);
 
