@@ -65,6 +65,13 @@ void Renderer::render() {
   m_snowShader.setUniform("modelViewProjection", modelViewProjection);
   m_snowShader.setUniform("in_color", Color(1.0f, 1.0f, 1.0f, 1.0f));
 
+  // int numParticles = m_materialPoints.size();
+  // MatrixXf positions(3, numParticles);
+  //
+  // for (int i = 0; i < numParticles; i++) {
+  //   positions.col(i) = m_materialPoints[i].m_position;
+  // }
+
   MatrixXf positions(3, 1000);
   int idx = 0;
 
