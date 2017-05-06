@@ -251,15 +251,21 @@ void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
 void Grid::setInitialVolumesAndDensities(MaterialPoints &materialPoints) {
   auto logger = spdlog::get("snowsim");
   logger->info("Setting initial volumes and densities...");
-  for (auto &mp : materialPoints.m_materialPoints) {
-    for (auto &node : getNearbyNodes(mp, 2.0)) {
+
+  for (auto const &mp : materialPoints.m_materialPoints) {
+    forEachNeighbor(mp, [mp](GridNode *node) {
       mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
-    }
+    });
+    //
+    // for (auto &node : getNearbyNodes(mp, 2.0)) {
+    //   mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
+    // }
 
     if (mp->m_density != 0) {
       mp->m_volume = mp->m_mass / mp->m_density;
     }
   }
+
   logger->info("Finished initial computation");
 }
 
@@ -290,9 +296,10 @@ void Grid::computeGridForces(MaterialPoints &materialPoints,
   }
 }
 
-template <typename Func>
-void Grid::forEachNeighbor(MaterialPoint *particle, Func &&f) {
-  Array3i particleIdx = (particle->m_position.array() / m_spacing).floor();
+template <typename Lambda>
+void Grid::forEachNeighbor(MaterialPoint *particle, Lambda &&f) {
+  Array3i particleIdx =
+      (particle->m_position.array() / m_spacing).floor().cast<int>();
   Array3i min = (particleIdx - 1).max(0);
   Array3i max = (particleIdx + 2).min(m_dim.array() - 1);
 

@@ -99,7 +99,7 @@ public:
 private:
   // Utility methods
   inline Vector3i idxToVector(int idx);
-  inline int vectorToIdx(Vector3i idx);
+  inline int vectorToIdx(const Vector3i &idx);
 
   // Grid data
   // the x dimension varies the fastest, followed by y and then z.
