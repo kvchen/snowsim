@@ -34,6 +34,8 @@ private:
   MaterialPoints &m_materialPoints;
   Grid *m_grid;
 
+  size_t stepCount;
+
   std::shared_ptr<spdlog::logger> logger;
 
   // vector of all force fields

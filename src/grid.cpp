@@ -71,12 +71,12 @@ void GridNode::zeroForce() { m_force = Vector3f::Zero(); }
 
 void GridNode::addForce(Vector3f force) { m_force += force; }
 
-void GridNode::explicitUpdateVelocity(double timestep) {
+void GridNode::explicitUpdateVelocity(double delta_t) {
   m_velocityChange = m_velocity;
   if (m_mass > 0) {
-    m_velocity += timestep * m_force / m_mass;
+    m_velocity += delta_t * m_force / m_mass;
   } else {
-    m_velocity = Vector3f::Zero();
+    m_velocity.setZero();
   }
   m_velocityChange = m_velocity - m_velocityChange;
   // std::cout << "Grid velocity\n" << m_velocity << std::endl;
@@ -88,9 +88,9 @@ Vector3f GridNode::getVelocity() { return m_velocity; }
 
 Vector3f GridNode::getVelocityChange() { return m_velocityChange; }
 
-void GridNode::detectCollision(CollisionObject *co, double timestep) {
+void GridNode::detectCollision(CollisionObject *co, double delta_t) {
   Vector3f position = m_idx.cast<float>() * m_grid->m_spacing +
-                      m_grid->m_origin + timestep * m_velocity;
+                      m_grid->m_origin + delta_t * m_velocity;
   if (co->phi(position) <= 0) {
     Vector3f normal = co->normal(position);
     Vector3f relVelocity = m_velocity - co->m_velocity;
@@ -290,16 +290,28 @@ void Grid::computeGridForces(MaterialPoints &materialPoints,
     JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
 
     double Jp = mp->m_defPlastic.determinant();
-    // double Je = svd.singularValues().prod();
     double Je = mp->m_defElastic.determinant();
 
-    Matrix3f stress =
-        2 * snowModel.initialMu *
-        (mp->m_defElastic - svd.matrixU() * svd.matrixV().transpose()) *
-        (mp->m_defElastic.transpose());
+    Matrix3f Re = svd.matrixU() * svd.matrixV().transpose();
+    // Matrix3f Se = svd.matrixV() * svd.singularValues().asDiagonal() *
+    //               svd.matrixV().transpose();
+    // Matrix3f Fe = Re * Se;
 
-    stress += snowModel.initialLambda * (Je - 1) * Je * Matrix3f::Identity();
-    stress *= exp(snowModel.hardeningCoefficient * (1 - Jp));
+    double epsilon = exp(fmin(snowModel.hardeningCoefficient * (1 - Jp), 1e3));
+    double mu = snowModel.initialMu * epsilon;
+    double lambda = snowModel.initialLambda * epsilon;
+
+    Matrix3f stress =
+        2 * mu * (mp->m_defElastic - Re) * mp->m_defElastic.transpose() +
+        Matrix3f::Constant(lambda * (Je - 1) * Je);
+
+    // Matrix3f stress =
+    //     2 * snowModel.initialMu *
+    //     (mp->m_defElastic - svd.matrixU() * svd.matrixV().transpose()) *
+    //     (mp->m_defElastic.transpose());
+
+    // stress += snowModel.initialLambda * (Je - 1) * Je * Matrix3f::Identity();
+    // stress *= exp(snowModel.hardeningCoefficient * (1 - Jp));
     Matrix3f force = -mp->m_volume * stress;
 
     forEachNeighbor(mp, [force, mp](GridNode *node) {

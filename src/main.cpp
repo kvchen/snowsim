@@ -123,6 +123,8 @@ int main() {
 
     glfwSwapBuffers(screen->glfwWindow());
     glfwPollEvents();
+
+    simulator.advance(1.0f / 60, snowModel);
   }
 
   logger->warn("Application terminated");

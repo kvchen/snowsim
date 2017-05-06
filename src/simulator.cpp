@@ -48,24 +48,30 @@ void Simulator::advance(double timestep, SnowModel snowModel) {
   updateParticleVelocities(timestep);
   detectParticleCollisions(timestep);
   updateParticlePositions(timestep);
+
+  stepCount++;
 }
 
-// void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
-//   auto logger = spdlog::get("snowsim");
-//   logger->info("Clearing cells...");
-//   for (auto &cell : m_gridCells) {
+// void Simulator::updateParticlePlacement() {
+//   logger->info("Clearing cells");
+//   for (auto &cell : m_grid->m_gridCells) {
 //     cell->clear();
 //   }
+//
 //   logger->info("Adding material points to cells...");
-//   for (auto &mp : materialPoints.m_materialPoints) {
+//   for (auto &mp : m_materialPoints.m_materialPoints) {
 //     Vector3f idx = (mp->m_position.array() / m_spacing).floor();
 //     int i = vectorToIdx(idx.cast<int>());
 //     m_gridCells[i]->addMaterialPoint(mp);
 //   }
+// }
+//
+// void Simulator::rasterizeParticlesToGrid() {
 //   logger->info("Rasterizing material points to grid nodes...");
 //   for (auto &node : m_gridNodes) {
 //     node->rasterizeMaterialPoints();
 //   }
+//
 //   logger->info("Finished rasterizing");
 // }
 

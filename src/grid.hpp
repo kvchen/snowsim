@@ -46,11 +46,11 @@ public:
   Vector3f gradBasisFunction(Vector3f particlePos) const;
   void zeroForce();
   void addForce(Vector3f force);
-  void explicitUpdateVelocity(double timestep);
+  void explicitUpdateVelocity(double delta_t);
   void semiImplicitUpdateVelocity(double beta);
   Vector3f getVelocity();
   Vector3f getVelocityChange();
-  void detectCollision(CollisionObject *co, double timestep);
+  void detectCollision(CollisionObject *co, double delta_t);
 
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
