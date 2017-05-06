@@ -75,7 +75,7 @@ class MaterialPoints {
 public:
   MaterialPoints();
 
-  std::vector<MaterialPoint> materialPoints;
+  std::vector<MaterialPoint *> m_materialPoints;
 };
 
 } // namespace SnowSimulator

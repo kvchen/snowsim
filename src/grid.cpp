@@ -13,7 +13,8 @@ using namespace SnowSimulator;
 // GRIDCELL METHODS
 // ============================================================================
 
-GridCell::GridCell(GridNode *node) : m_node(node) {}
+// GridCell::GridCell(GridNode *node) : m_node(node) {}
+GridCell::GridCell() {}
 
 void GridCell::addMaterialPoint(MaterialPoint *materialPoint) {
   m_materialPoints.push_back(materialPoint);
@@ -24,7 +25,6 @@ void GridCell::clear() {
   // for (auto &mp : m_materialPoints) {
   //   mp->m_cell = nullptr;
   // }
-
   m_materialPoints.clear();
 }
 
@@ -126,10 +126,11 @@ Vector3f GridNode::gradBasisFunction(Vector3f particlePos) const {
 Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
     : m_origin(origin), m_dim(dimensions), m_spacing(spacing) {
   auto logger = spdlog::get("snowsim");
-  int num_nodes = m_dim.x() * m_dim.y() * m_dim.z();
 
   logger->info("Creating grid of size ({}, {}, {})", m_dim.x(), m_dim.y(),
                m_dim.z());
+
+  int num_nodes = m_dim.prod();
   logger->info("Total node count: {}", num_nodes);
 
   // Allocate space for each of the gridNodes
@@ -139,37 +140,35 @@ Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
   for (int i = 0; i < num_nodes; i++) {
     GridNode *node = new GridNode(idxToVector(i), this);
     m_gridNodes.push_back(node);
-    m_gridCells.push_back(new GridCell(node));
+    m_gridCells.push_back(new GridCell());
   }
 
-  // Make sure each GridNode has a reference to the surrounding GridCells
+  // Make sure each GridNode has a reference to the 4^3 surrounding GridCells
   // within the support radius of the basis function.
+  // Each GridCell also needs to know about the 6^3 surrounding GridNodes.
 
   logger->info("Linking grid nodes to neighboring cells...");
 
   for (int i = 0; i < num_nodes; i++) {
-
+    Vector3i idx = idxToVector(i);
     GridNode *current = m_gridNodes[i];
 
-    for (int j = 0; j < 64; j++) {
-      Vector3i offset(j % 4 - 2, (j / 4) % 4 - 2, j / 16 - 2);
-      Vector3i offsetIdx = idxToVector(i) + offset;
+    // GridCell indexing is such that the corresponding GridNode is at the
+    // top-left corner of the GridCell.
 
-      // Ensure that the neighbor cell is within bounds
+    Vector3i minIdx = (idx.array() - 2).max(0);
+    Vector3i maxIdx = (idx.array() + 2).min(m_dim.array());
 
-      if (0 <= offsetIdx.minCoeff() && offsetIdx.x() < m_dim.x() &&
-          offsetIdx.y() < m_dim.y() && offsetIdx.z() < m_dim.z()) {
+    // Vector3i offsetDim = maxIdx - maxIdx;
+    // Vector3i numNeighboringCells = offsetDim.prod();
 
-        // std::cout << "------------" << std::endl;
-        // std::cout << offsetIdx << std::endl;
-        // std::cout << idxToVector(i) << std::endl;
-
-        int neighborIdx = vectorToIdx(offsetIdx);
-        GridNode *neighborNode = m_gridNodes[neighborIdx];
-        GridCell *neighborCell = m_gridCells[neighborIdx];
-
-        current->m_neighbors.push_back(neighborNode);
-        current->m_neighborCells.push_back(neighborCell);
+    for (int ox = minIdx.x(); ox < maxIdx.x(); ox++) {
+      for (int oy = minIdx.y(); oy < maxIdx.y(); oy++) {
+        for (int oz = minIdx.z(); oz < maxIdx.z(); oz++) {
+          int cellIdx = vectorToIdx(Vector3i(ox, oy, oz));
+          GridCell *neighborCell = m_gridCells[cellIdx];
+          current->m_neighborCells.push_back(neighborCell);
+        }
       }
     }
   }
@@ -191,22 +190,31 @@ Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
 // }
 
 void Grid::computeParticleVolumesAndDensities(MaterialPoints &materialPoints) {
-  for (auto &mp : materialPoints.m_materialPoints) {
-    for (auto &node : mp->cell->node->neighbors) {
-      mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
-    }
-  }
+  // for (auto &mp : materialPoints.m_materialPoints) {
+  //   for (auto &node : mp->cell->node->neighbors) {
+  //     mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
+  //   }
+  // }
 }
 
 std::vector<GridNode *> Grid::getNearbyNodes(MaterialPoint *particle,
-                                             double radius = 2.0) {
-  dVector3f min = particle->m_position - radius;
-  Vector3f max = particle->m_position + radius;
+                                             double radius) {
+  Vector3f min = (particle->m_position.array() - radius).ceil().max(0);
+  Vector3f max = (particle->m_position.array() + radius)
+                     .floor()
+                     .max(m_dim.array().cast<float>());
+  std::vector<GridNode *> nearbyNodes;
 
-  for (int i = -radius; i < radius; i++) {
+  for (int x = min.x(); x < max.x(); x++) {
+    for (int y = min.y(); y < max.y(); y++) {
+      for (int z = min.z(); z < max.z(); z++) {
+        int idx = vectorToIdx(Vector3i(x, y, z));
+        nearbyNodes.push_back(m_gridNodes[idx]);
+      }
+    }
   }
 
-  return
+  return nearbyNodes;
 }
 
 inline Vector3i Grid::idxToVector(int idx) {

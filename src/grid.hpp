@@ -12,6 +12,8 @@ namespace SnowSimulator {
 // Forward declarations
 
 class MaterialPoint;
+class MaterialPoints;
+
 class GridCell;
 class GridNode;
 class Grid;
@@ -22,7 +24,8 @@ class Grid;
  */
 class GridCell {
 public:
-  GridCell(GridNode *gridNode);
+  GridCell();
+  // GridCell(GridNode *gridNode);
   void addMaterialPoint(MaterialPoint *materialPoint);
   void clear();
 
@@ -63,7 +66,9 @@ public:
   // Rasterization methods
 
   void rasterizeParticlesToGrid();
-  void computeParticleVolumesAndDensities();
+  void computeParticleVolumesAndDensities(MaterialPoints &materialPoints);
+  std::vector<GridNode *> getNearbyNodes(MaterialPoint *particle,
+                                         double radius = 2.0);
 
   float m_spacing; // h in the paper
 
