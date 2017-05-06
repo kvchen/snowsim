@@ -85,6 +85,7 @@ Vector3f GridNode::getVelocity() { return m_velocity; }
 Vector3f GridNode::getVelocityChange() { return m_velocityChange; }
 
 void GridNode::detectCollision(CollisionObject *co, double timestep) {
+  auto logger = spdlog::get("snowsim");
   Vector3f position = m_idx.cast<float>() * m_grid->m_spacing +
                       m_grid->m_origin + timestep * m_velocity;
   if (co->phi(position) <= 0) {
@@ -102,6 +103,7 @@ void GridNode::detectCollision(CollisionObject *co, double timestep) {
     }
     m_velocityChange = m_velocity - m_velocityChange;
     m_velocity = relVelocity + co->m_velocity;
+    if (!m_velocity.isZero()) logger->info("Velocity ({}, {}, {}) should be 0", m_velocity.x(), m_velocity.y(), m_velocity.z());
     m_velocityChange = m_velocity - m_velocityChange;
   }
 }
