@@ -96,8 +96,8 @@ void GridNode::detectCollision(CollisionObject *co, double timestep) {
       if (tangent.norm() <= -co->m_friction * magnitude) {
         relVelocity.setZero();
       } else {
-        relVelocity = tangent +
-                      co->m_friction * magnitude * tangent / tangent.norm();
+        relVelocity =
+            tangent + co->m_friction * magnitude * tangent / tangent.norm();
       }
     }
     m_velocityChange = m_velocity - m_velocityChange;
@@ -282,6 +282,22 @@ void Grid::computeGridForces(MaterialPoints &materialPoints,
   }
 }
 
+template <typename Func>
+void Grid::forEachNeighbor(MaterialPoint *particle, Func &&f) {
+  Array3i particleIdx = (particle->m_position.array() / m_spacing).floor();
+  Array3i min = (particleIdx - 1).max(0);
+  Array3i max = (particleIdx + 2).min(m_dim.array() - 1);
+
+  for (int x = min.x(); x < max.x(); x++) {
+    for (int y = min.y(); y < max.y(); y++) {
+      for (int z = min.z(); z < max.z(); z++) {
+        int neighborIdx = vectorToIdx(Vector3i(x, y, z));
+        f(m_gridNodes[neighborIdx]);
+      }
+    }
+  }
+}
+
 std::vector<GridNode *> Grid::getNearbyNodes(MaterialPoint *particle,
                                              double radius) {
   Vector3f min =
@@ -309,6 +325,6 @@ inline Vector3i Grid::idxToVector(int idx) {
                   idx / (m_dim.x() * m_dim.y()));
 }
 
-inline int Grid::vectorToIdx(Vector3i idx) {
+inline int Grid::vectorToIdx(const Vector3i &idx) {
   return idx.x() + m_dim.x() * (idx.y() + m_dim.y() * idx.z());
 }

@@ -3,9 +3,9 @@
 
 #include <Eigen/Dense>
 
+#include "collisionObject.hpp"
 #include "materialPoints.hpp"
 #include "snowModel.hpp"
-#include "collisionObject.hpp"
 
 using namespace Eigen;
 
@@ -82,6 +82,10 @@ public:
   void setInitialVolumesAndDensities(MaterialPoints &materialPoints);
   void computeGridForces(MaterialPoints &materialPoints,
                          struct SnowModel snowModel);
+
+  template <typename Func>
+  void forEachNeighbor(MaterialPoint *particle, Func &&f);
+
   std::vector<GridNode *> getNearbyNodes(MaterialPoint *particle,
                                          double radius = 2.0);
   std::vector<GridNode *> getAllNodes();
