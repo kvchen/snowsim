@@ -5,6 +5,7 @@
 
 #include "materialPoints.hpp"
 #include "snowModel.hpp"
+#include "collisionObject.hpp"
 
 using namespace Eigen;
 
@@ -49,6 +50,7 @@ public:
   void semiImplicitUpdateVelocity(double beta);
   Vector3f getVelocity();
   Vector3f getVelocityChange();
+  void detectCollision(CollisionObject *co, double timestep);
 
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
@@ -83,6 +85,7 @@ public:
                                          double radius = 2.0);
 
   float m_spacing; // h in the paper
+  Vector3f m_origin;
 
 private:
   // Utility methods
@@ -93,7 +96,6 @@ private:
 
   // Grid sizing and location
 
-  Vector3f m_origin;
   Vector3i m_dim;
 
   // Grid data

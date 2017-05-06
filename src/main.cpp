@@ -10,6 +10,8 @@
 #include "simulator.hpp"
 #include "snowModel.hpp"
 #include "materialPoints.hpp"
+#include "collisionObject.hpp"
+#include "groundCO.hpp"
 
 using namespace Eigen;
 using namespace SnowSimulator;
@@ -22,6 +24,8 @@ int main() {
     nanogui::Screen app({1024, 768}, "Snow Simulator");
 
     SnowModel snowModel;
+    std::vector<CollisionObject *> colliders;
+    colliders.push_back(new GroundCO(0.5));
     MaterialPoints mPoints;
 
     std::default_random_engine gen1;
@@ -32,7 +36,7 @@ int main() {
     auto randomPos = std::bind(uniform, gen2);
 
     const int numParticles = 3.0e5;
-
+    logger->info("Generating {} random particles", numParticles);
     for (int i = 0; i < numParticles; i++) {
       double u = randomRadius();
       double x = randomPos();
@@ -46,7 +50,7 @@ int main() {
     }
 
     Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
-    Simulator simulator(mPoints, &grid);
+    Simulator simulator(mPoints, &grid, colliders);
 
     // TODO(kvchen): Renderer should also be initialized here and called
     // once per frame down below.

@@ -80,12 +80,30 @@ void GridNode::explicitUpdateVelocity(double timestep) {
 
 void GridNode::semiImplicitUpdateVelocity(double beta) {}
 
-Vector3f GridNode::getVelocity() {
-  return m_velocity;
-}
+Vector3f GridNode::getVelocity() { return m_velocity; }
 
-Vector3f GridNode::getVelocityChange() {
-  return m_velocityChange;
+Vector3f GridNode::getVelocityChange() { return m_velocityChange; }
+
+void GridNode::detectCollision(CollisionObject *co, double timestep) {
+  Vector3f position = m_idx.cast<float>() * m_grid->m_spacing +
+                      m_grid->m_origin + timestep * m_velocity;
+  if (co->phi(position) <= 0) {
+    Vector3f normal = co->normal(position);
+    Vector3f relVelocity = m_velocity - co->m_velocity;
+    double magnitude = relVelocity.transpose() * normal;
+    if (magnitude < 0) {
+      Vector3f tangent = relVelocity - normal * magnitude;
+      if (tangent.norm() <= -co->m_friction * magnitude) {
+        relVelocity.setZero();
+      } else {
+        relVelocity = tangent +
+                      co->m_friction * magnitude * tangent / tangent.norm();
+      }
+    }
+    m_velocityChange = m_velocity - m_velocityChange;
+    m_velocity = relVelocity + co->m_velocity;
+    m_velocityChange = m_velocity - m_velocityChange;
+  }
 }
 
 /**
