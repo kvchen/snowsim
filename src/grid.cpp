@@ -273,8 +273,10 @@ void Grid::computeGridForces(MaterialPoints &materialPoints,
 
 std::vector<GridNode *> Grid::getNearbyNodes(MaterialPoint *particle,
                                              double radius) {
-  Vector3f min = (particle->m_position.array() - radius).ceil().max(0);
-  Vector3f max = (particle->m_position.array() + radius)
+  Vector3f min =
+      (particle->m_position.array() / m_spacing - radius).ceil().max(0);
+
+  Vector3f max = (particle->m_position.array() / m_spacing + radius)
                      .floor()
                      .max(m_dim.array().cast<float>());
   std::vector<GridNode *> nearbyNodes;

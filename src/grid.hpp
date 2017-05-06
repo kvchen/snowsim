@@ -55,6 +55,8 @@ public:
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
 
+  // Physical properties
+  Vector3f m_velocity;
   double m_mass;
 
 private:
@@ -65,7 +67,6 @@ private:
   Grid *m_grid;
 
   // Physical properties
-  Vector3f m_velocity;
   Vector3f m_velocityChange;
   Vector3f m_force;
 };
@@ -84,19 +85,16 @@ public:
   std::vector<GridNode *> getNearbyNodes(MaterialPoint *particle,
                                          double radius = 2.0);
 
-  float m_spacing; // h in the paper
+  // Grid sizing and location
+
   Vector3f m_origin;
+  Vector3i m_dim;
+  float m_spacing; // h in the paper
 
 private:
   // Utility methods
   inline Vector3i idxToVector(int idx);
   inline int vectorToIdx(Vector3i idx);
-
-  // MaterialPoints &m_materialPoints;
-
-  // Grid sizing and location
-
-  Vector3i m_dim;
 
   // Grid data
   // the x dimension varies the fastest, followed by y and then z.

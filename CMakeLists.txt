@@ -20,8 +20,8 @@ include_directories(lib/embed-resource)
 add_subdirectory(lib/embed-resource)
 
 embed_resources(SNOWSIM_SHADERS
-  shaders/vert.glsl
-  shaders/frag.glsl
+  shaders/snow.vert
+  shaders/snow.frag
 )
 
 add_subdirectory(src)
