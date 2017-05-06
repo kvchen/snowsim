@@ -79,7 +79,7 @@ int main() {
   auto randomRadius = std::bind(uniform, gen1);
   auto randomPos = std::bind(normal, gen2);
 
-  const int numParticles = 3.0e5;
+  const int numParticles = 1000;
   logger->info("Generating {} random particles", numParticles);
 
   for (int i = 0; i < numParticles; i++) {
@@ -98,6 +98,9 @@ int main() {
 
   Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
   Simulator simulator(points, &grid, colliders);
+  simulator.firstStep();
+  simulator.advance(1.0, snowModel);
+  logger->info("Advancing 1 frame...");
 
   renderer = new Renderer(*screen, grid, points);
 
