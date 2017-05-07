@@ -66,10 +66,10 @@ void Renderer::render() {
   m_snowShader.setUniform("in_color", Color(1.0f, 1.0f, 1.0f, 1.0f));
 
   int numParticles = m_materialPoints.m_materialPoints.size();
-  MatrixXf positions(3, numParticles);
+  MatrixXf particlePositions(3, numParticles);
 
   for (int i = 0; i < numParticles; i++) {
-    positions.col(i) = m_materialPoints.m_materialPoints[i]->m_position;
+    particlePositions.col(i) = m_materialPoints.m_materialPoints[i]->m_position;
   }
 
   // MatrixXf positions(3, 1000);
@@ -83,8 +83,54 @@ void Renderer::render() {
   //   }
   // }
 
-  m_snowShader.uploadAttrib("in_position", positions);
-  m_snowShader.drawArray(GL_POINTS, 0, 1000);
+  m_snowShader.uploadAttrib("in_position", particlePositions);
+  m_snowShader.drawArray(GL_POINTS, 0, numParticles);
+
+  // Draw the grid bounding box
+
+  Vector3f bboxMin = m_grid.m_origin;
+  Vector3f bboxMax = bboxMin + m_grid.m_dim.cast<float>() * m_grid.m_spacing;
+
+  MatrixXf bboxVertices(3, 24);
+
+  bboxVertices.col(0) = bboxMin;
+  bboxVertices.col(1) << bboxMax.x(), bboxMin.y(), bboxMin.z();
+
+  bboxVertices.col(2) = bboxMin;
+  bboxVertices.col(3) << bboxMin.x(), bboxMax.y(), bboxMin.z();
+
+  bboxVertices.col(4) = bboxMin;
+  bboxVertices.col(5) << bboxMin.x(), bboxMin.y(), bboxMax.z();
+
+  bboxVertices.col(6) << bboxMax.x(), bboxMin.y(), bboxMax.z();
+  bboxVertices.col(7) << bboxMax.x(), bboxMin.y(), bboxMin.z();
+
+  bboxVertices.col(8) << bboxMax.x(), bboxMin.y(), bboxMax.z();
+  bboxVertices.col(9) << bboxMax.x(), bboxMax.y(), bboxMax.z();
+
+  bboxVertices.col(10) << bboxMax.x(), bboxMin.y(), bboxMax.z();
+  bboxVertices.col(11) << bboxMin.x(), bboxMin.y(), bboxMax.z();
+
+  bboxVertices.col(12) << bboxMin.x(), bboxMax.y(), bboxMax.z();
+  bboxVertices.col(13) << bboxMin.x(), bboxMax.y(), bboxMin.z();
+
+  bboxVertices.col(14) << bboxMin.x(), bboxMax.y(), bboxMax.z();
+  bboxVertices.col(15) = bboxMax;
+
+  bboxVertices.col(16) << bboxMin.x(), bboxMax.y(), bboxMax.z();
+  bboxVertices.col(17) << bboxMin.x(), bboxMin.y(), bboxMax.z();
+
+  bboxVertices.col(18) << bboxMax.x(), bboxMax.y(), bboxMin.z();
+  bboxVertices.col(19) << bboxMin.x(), bboxMax.y(), bboxMin.z();
+
+  bboxVertices.col(20) << bboxMax.x(), bboxMax.y(), bboxMin.z();
+  bboxVertices.col(21) = bboxMax;
+
+  bboxVertices.col(22) << bboxMax.x(), bboxMax.y(), bboxMin.z();
+  bboxVertices.col(23) << bboxMax.x(), bboxMin.y(), bboxMin.z();
+
+  m_snowShader.uploadAttrib("in_position", bboxVertices);
+  m_snowShader.drawArray(GL_LINES, 0, 24);
 }
 
 // ============================================================================

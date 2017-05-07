@@ -40,17 +40,11 @@ public:
   GridNode(Vector3i idx, Grid *grid);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  void rasterizeMaterialPoints();
-
   float basisFunction(Vector3f particlePos) const;
   Vector3f gradBasisFunction(Vector3f particlePos) const;
   void zeroForce();
   void addForce(Vector3f force);
-  void explicitUpdateVelocity(double delta_t);
-  void semiImplicitUpdateVelocity(double beta);
   Vector3f getVelocity();
-  Vector3f getVelocityChange();
-  void detectCollision(CollisionObject *co, double delta_t);
 
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
@@ -60,6 +54,7 @@ public:
   Vector3f m_nextVelocity;
 
   double m_mass;
+  Vector3f m_force;
 
 private:
   float cubicBSpline(float x) const;
@@ -67,10 +62,6 @@ private:
 
   Vector3i m_idx;
   Grid *m_grid;
-
-  // Physical properties
-  // Vector3f m_velocityChange;
-  Vector3f m_force;
 };
 
 class Grid {
@@ -78,28 +69,16 @@ public:
   Grid(Vector3f origin, Vector3i dimensions, float spacing);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  // Rasterization methods
+  std::vector<GridNode *> getAllNodes();
 
-  void rasterizeMaterialPoints(MaterialPoints &materialPoints);
-  void setInitialVolumesAndDensities(MaterialPoints &materialPoints);
-  void computeGridForces(MaterialPoints &materialPoints,
-                         struct SnowModel snowModel);
-
-  // Helper functions
-
-  // template <typename Lambda>
-  // void forEachActiveCell(Lambda &&f) {
-  //   for (auto &cell : m_gridCells) {
-  //
-  //   }
-  // }
+  // Template functions
 
   template <typename Lambda>
   void forEachNeighbor(MaterialPoint *particle, Lambda &&f) {
     Array3i particleIdx =
         (particle->m_position.array() / m_spacing).floor().cast<int>();
-    Array3i min = (particleIdx - 1).max(0);
-    Array3i max = (particleIdx + 2).min(m_dim.array() - 1);
+    Array3i min = (particleIdx - 2).max(0);
+    Array3i max = (particleIdx + 3).min(m_dim.array() - 1);
 
     for (int x = min.x(); x < max.x(); x++) {
       for (int y = min.y(); y < max.y(); y++) {
@@ -111,17 +90,6 @@ public:
     }
   }
 
-  std::vector<GridNode *> getAllNodes();
-
-  // Grid sizing and location
-
-  Vector3f m_origin;
-  Vector3i m_dim;
-  float m_spacing; // h in the paper
-
-private:
-  // Utility methods
-
   inline Vector3i idxToVector(int idx) {
     return Vector3i(idx % m_dim.x(), (idx / m_dim.x()) % m_dim.y(),
                     idx / (m_dim.x() * m_dim.y()));
@@ -131,13 +99,16 @@ private:
     return idx.x() + m_dim.x() * (idx.y() + m_dim.y() * idx.z());
   }
 
+  // Grid sizing and location
+
+  Vector3f m_origin;
+  Vector3i m_dim;
+  float m_spacing; // h in the paper
+
   // Grid data
-  // the x dimension varies the fastest, followed by y and then z.
 
   std::vector<GridNode *> m_gridNodes;
   std::vector<GridCell *> m_gridCells;
-
-  // std::shared_ptr<spdlog::logger> logger;
 };
 
 } // namespace SnowSimulator

@@ -2,7 +2,6 @@
 #include <nanogui/nanogui.h>
 #include <random>
 #include <stdlib.h>
-#include <typeinfo>
 
 #include "spdlog/spdlog.h"
 
@@ -80,11 +79,9 @@ int main() {
   auto randomRadius = std::bind(uniform, gen1);
   auto randomPos = std::bind(normal, gen2);
 
-  // const int numParticles = 1000;
-  const int numParticles = 3e5;
+  const int numParticles = 1000;
+  // const int numParticles = 3e5;
   logger->info("Generating {} random particles", numParticles);
-
-  std::cout << typeid(logger).name() << '\n';
 
   for (int i = 0; i < numParticles; i++) {
     double u = randomRadius();
@@ -101,10 +98,8 @@ int main() {
   }
 
   Grid grid(Vector3f(0, 0, 0), Vector3i(100, 300, 100), 0.2);
-  Simulator simulator(points, &grid, colliders);
-  simulator.firstStep();
-
   renderer = new Renderer(*screen, grid, points);
+  Simulator simulator(points, &grid, snowModel, colliders);
 
   setGLFWCallbacks();
 
@@ -116,15 +111,13 @@ int main() {
   while (!glfwWindowShouldClose(screen->glfwWindow())) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    simulator.advance(1.0f / 60, snowModel);
+    simulator.advance(1e-1);
 
     renderer->render();
     screen->drawWidgets();
 
     glfwSwapBuffers(screen->glfwWindow());
     glfwPollEvents();
-
-    simulator.advance(1.0f / 60, snowModel);
   }
 
   logger->warn("Application terminated");

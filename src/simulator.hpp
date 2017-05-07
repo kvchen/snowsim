@@ -14,15 +14,19 @@ namespace SnowSimulator {
 
 class Simulator {
 public:
-  Simulator(MaterialPoints &materialPoints, Grid *grid,
+  Simulator(MaterialPoints &materialPoints, Grid *grid, SnowModel &snowModel,
             std::vector<CollisionObject *> colliders);
 
-  void advance(double delta_t, SnowModel snowModel);
+  void advance(double delta_t);
   void rasterizeParticlesToGrid();
+  void setParticleVolumesAndDensities();
+  void computeGridForces();
+  void updateGridVelocities(double delta_t);
 
-  void firstStep();
+  void detectGridCollisions(double delta_t);
+  void explicitIntegration();
 
-  void updateDeformationGradient(double delta_t, SnowModel snowModel);
+  void updateDeformationGradient(double delta_t);
   void updateParticleVelocities(double delta_t, float alpha = 0.95);
   void detectParticleCollisions(double delta_t);
   void updateParticlePositions(double delta_t);
@@ -33,6 +37,7 @@ private:
   // Object storing the particle data
   MaterialPoints &m_materialPoints;
   Grid *m_grid;
+  SnowModel &m_snowModel;
 
   size_t stepCount;
 

@@ -1,6 +1,7 @@
 #ifndef MATERIALPOINTS_H
 #define MATERIALPOINTS_H
 
+#include <iostream>
 #include <vector>
 
 #include "forceField.hpp"
@@ -34,6 +35,22 @@ public:
   double m_mass = 1.0;
   double m_volume;
   double m_density;
+
+  friend std::ostream &operator<<(std::ostream &os, const MaterialPoint &mp) {
+    IOFormat InlineFormat(StreamPrecision, DontAlignCols, ", ", ", ", "", "",
+                          "(", ")");
+    os << "Particle(" << std::endl;
+    os << "  position: " << mp.m_position.format(InlineFormat) << std::endl;
+    os << "  velocity: " << mp.m_velocity.format(InlineFormat) << std::endl;
+    os << "  defElastic: " << mp.m_defElastic.format(InlineFormat) << std::endl;
+    os << "  defPlastic: " << mp.m_defPlastic.format(InlineFormat) << std::endl;
+    os << "  mass: " << mp.m_mass << std::endl;
+    os << "  volume: " << mp.m_volume << std::endl;
+    os << "  density: " << mp.m_density << std::endl;
+    os << ")" << std::endl;
+
+    return os;
+  };
 };
 
 /**

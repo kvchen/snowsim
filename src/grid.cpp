@@ -14,7 +14,6 @@ using namespace SnowSimulator;
 // GRIDCELL METHODS
 // ============================================================================
 
-// GridCell::GridCell(GridNode *node) : m_node(node) {}
 GridCell::GridCell() {}
 
 void GridCell::addMaterialPoint(MaterialPoint *materialPoint) {
@@ -22,12 +21,7 @@ void GridCell::addMaterialPoint(MaterialPoint *materialPoint) {
   materialPoint->m_cell = this;
 }
 
-void GridCell::clear() {
-  // for (auto &mp : m_materialPoints) {
-  //   mp->m_cell = nullptr;
-  // }
-  m_materialPoints.clear();
-}
+void GridCell::clear() { m_materialPoints.clear(); }
 
 // ============================================================================
 // GRIDNODE METHODS
@@ -35,84 +29,13 @@ void GridCell::clear() {
 
 GridNode::GridNode(Vector3i idx, Grid *grid)
     : m_idx(idx), m_grid(grid), m_mass(0), m_velocity(Vector3f::Zero()),
-      m_nextVelocity(Vector3f::Zero()), m_force(Vector3f::Zero()) {
-  // m_surroundingCells.push_back(new GridCell(this));
-}
-
-/**
- * TODO(kvchen): Look into parallelizing this with OpenMP.
- */
-void GridNode::rasterizeMaterialPoints() {
-  // Rasterize mass to the grid
-  for (auto const &cell : m_neighborCells) {
-    for (auto const &mp : cell->m_materialPoints) {
-      m_mass += mp->m_mass * basisFunction(mp->m_position);
-    }
-  }
-
-  // std::cout << m_mass << std::endl;
-
-  // Rasterize velocity to the grid
-  if (m_mass == 0) {
-    m_velocity.setZero();
-  } else {
-    for (auto const &cell : m_neighborCells) {
-      for (auto const &mp : cell->m_materialPoints) {
-        m_velocity +=
-            mp->m_velocity * mp->m_mass * basisFunction(mp->m_position);
-      }
-    }
-
-    m_velocity /= m_mass;
-  }
-}
+      m_nextVelocity(Vector3f::Zero()), m_force(Vector3f::Zero()) {}
 
 void GridNode::zeroForce() { m_force = Vector3f::Zero(); }
 
 void GridNode::addForce(Vector3f force) { m_force += force; }
 
-void GridNode::explicitUpdateVelocity(double delta_t) {
-  // m_velocityChange = m_velocity;
-  if (m_mass > 0) {
-    m_nextVelocity = m_velocity + delta_t * m_force / m_mass;
-    // m_velocity += delta_t * m_force / m_mass;
-  } else {
-    m_nextVelocity.setZero();
-  }
-
-  m_velocity = m_nextVelocity;
-  // m_velocityChange = m_velocity - m_velocityChange;
-  // std::cout << "Grid velocity\n" << m_velocity << std::endl;
-}
-
-void GridNode::semiImplicitUpdateVelocity(double beta) {}
-
 Vector3f GridNode::getVelocity() { return m_velocity; }
-
-// Vector3f GridNode::getVelocityChange() { return m_velocityChange; }
-
-void GridNode::detectCollision(CollisionObject *co, double delta_t) {
-  Vector3f position = m_idx.cast<float>() * m_grid->m_spacing +
-                      m_grid->m_origin + delta_t * m_velocity;
-  if (co->phi(position) <= 0) {
-    Vector3f normal = co->normal(position);
-    Vector3f relVelocity = m_velocity - co->m_velocity;
-    double magnitude = relVelocity.transpose() * normal;
-    if (magnitude < 0) {
-      Vector3f tangent = relVelocity - normal * magnitude;
-      if (tangent.norm() <= -co->m_friction * magnitude) {
-        relVelocity.setZero();
-      } else {
-        relVelocity =
-            tangent + co->m_friction * magnitude * tangent / tangent.norm();
-      }
-    }
-    // m_velocityChange = m_velocity - m_velocityChange;
-    m_nextVelocity = relVelocity + co->m_velocity;
-    m_velocity = m_nextVelocity;
-    // m_velocityChange = m_velocity - m_velocityChange;
-  }
-}
 
 /**
  * The cubic B-spline formulation of the grid basis function used for
@@ -134,12 +57,13 @@ float GridNode::cubicBSpline(float x) const {
 
 float GridNode::gradCubicBSpline(float x) const {
   float absx = fabs(x);
-  int sign = copysign(1, x);
+  // int sign = copysign(1, x);
+  int sign = x > 0 ? 1 : -1;
 
   if (absx < 1) {
     return sign * (1.5 * absx - 2) * absx;
   } else if (absx < 2) {
-    return sign * ((-0.5f * x + 2) * x - 2);
+    return sign * ((-0.5f * absx + 2) * absx - 2);
   } else {
     return 0;
   }
@@ -150,8 +74,7 @@ float GridNode::gradCubicBSpline(float x) const {
  * materialPoint to the grid. This is referred to as w in the paper.
  */
 float GridNode::basisFunction(Vector3f particlePos) const {
-  float invSpacing = 1.0f / m_grid->m_spacing;
-  Vector3f offset = invSpacing * particlePos - m_idx.cast<float>();
+  Vector3f offset = particlePos / m_grid->m_spacing - m_idx.cast<float>();
 
   return cubicBSpline(offset.x()) * cubicBSpline(offset.y()) *
          cubicBSpline(offset.z());
@@ -167,7 +90,7 @@ Vector3f GridNode::gradBasisFunction(Vector3f particlePos) const {
              cubicBSpline(offset.z());
   float gz = cubicBSpline(offset.x()) * cubicBSpline(offset.y()) *
              gradCubicBSpline(offset.z());
-  return invSpacing * Vector3f(gx, gy, gz);
+  return Vector3f(gx, gy, gz);
 }
 
 // ============================================================================
@@ -223,104 +146,3 @@ Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
 }
 
 std::vector<GridNode *> Grid::getAllNodes() { return m_gridNodes; }
-
-/**
- * Uses the grid basis function to computes the weighting factor for each pair
- * of particle and grid cell.
- */
-// void Grid::computeWeights() {}
-
-void Grid::rasterizeMaterialPoints(MaterialPoints &materialPoints) {
-  auto logger = spdlog::get("snowsim");
-
-  logger->info("Clearing cells...");
-  for (auto &cell : m_gridCells) {
-    cell->clear();
-  }
-
-  logger->info("Adding material points to cells...");
-  for (auto &mp : materialPoints.m_materialPoints) {
-    Vector3f idx = (mp->m_position.array() / m_spacing).floor();
-    int i = vectorToIdx(idx.cast<int>());
-    m_gridCells[i]->addMaterialPoint(mp);
-  }
-
-  logger->info("Rasterizing material points to grid nodes...");
-  for (auto &node : m_gridNodes) {
-    node->rasterizeMaterialPoints();
-  }
-
-  logger->info("Finished rasterizing");
-}
-
-// inline GridNode *Grid::getNode(Vector3i idx) {
-//   return m_gridNodes[vectorToIdx(idx)];
-// }
-
-void Grid::setInitialVolumesAndDensities(MaterialPoints &materialPoints) {
-  auto logger = spdlog::get("snowsim");
-  logger->info("Setting initial volumes and densities...");
-
-  for (auto const &mp : materialPoints.m_materialPoints) {
-    mp->m_volume = 0;
-    mp->m_density = 0;
-
-    forEachNeighbor(mp, [mp](GridNode *node) {
-      mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
-    });
-
-    // std::cout << mp->m_mass << std::endl;
-
-    // assert(!std::isnan(mp->m_density));
-
-    if (mp->m_density != 0) {
-      mp->m_volume = mp->m_mass / mp->m_density;
-    }
-
-    // assert(!std::isnan(mp->m_volume));
-  }
-
-  logger->info("Finished initial computation");
-}
-
-void Grid::computeGridForces(MaterialPoints &materialPoints,
-                             SnowModel snowModel) {
-  for (auto &node : m_gridNodes) {
-    node->zeroForce();
-    // node->addForce(Vector3f(0, -9.8, 0));
-  }
-
-  for (auto &mp : materialPoints.m_materialPoints) {
-    JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
-
-    double Jp = mp->m_defPlastic.determinant();
-    double Je = mp->m_defElastic.determinant();
-
-    Matrix3f Re = svd.matrixU() * svd.matrixV().transpose();
-    // Matrix3f Se = svd.matrixV() * svd.singularValues().asDiagonal() *
-    //               svd.matrixV().transpose();
-    // Matrix3f Fe = Re * Se;
-
-    double epsilon = exp(fmin(snowModel.hardeningCoefficient * (1 - Jp), 1e3));
-    double mu = snowModel.initialMu * epsilon;
-    double lambda = snowModel.initialLambda * epsilon;
-
-    Matrix3f stress =
-        mp->m_defPlastic / Jp *
-        (2 * mu * (mp->m_defElastic - Re) * mp->m_defElastic.transpose() +
-         Matrix3f::Constant(lambda * (Je - 1) * Je));
-
-    // Matrix3f stress =
-    //     2 * snowModel.initialMu *
-    //     (mp->m_defElastic - svd.matrixU() * svd.matrixV().transpose()) *
-    //     (mp->m_defElastic.transpose());
-
-    // stress += snowModel.initialLambda * (Je - 1) * Je * Matrix3f::Identity();
-    // stress *= exp(snowModel.hardeningCoefficient * (1 - Jp));
-    Matrix3f force = -mp->m_volume * stress;
-
-    forEachNeighbor(mp, [force, mp](GridNode *node) {
-      node->addForce(force * node->gradBasisFunction(mp->m_position));
-    });
-  }
-}
