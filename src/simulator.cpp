@@ -126,11 +126,6 @@ void Simulator::setParticleVolumesAndDensities() {
 }
 
 void Simulator::computeGridForces() {
-  for (auto &node : m_grid->m_gridNodes) {
-    node->zeroForce();
-    // node->addForce(Vector3f(0, -9.8, 0));
-  }
-
   for (auto &mp : m_materialPoints.m_materialPoints) {
     JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
 
@@ -144,23 +139,14 @@ void Simulator::computeGridForces() {
 
     double epsilon =
         exp(fmin(m_snowModel.hardeningCoefficient * (1 - Jp), 1e3));
-    double mu = m_snowModel.initialMu * epsilon;
-    double lambda = m_snowModel.initialLambda * epsilon;
+    // double mu = m_snowModel.initialMu * epsilon;
+    // double lambda = m_snowModel.initialLambda * epsilon;
 
     Matrix3f stress =
-        mp->m_defPlastic / Jp *
-        (2 * mu * (mp->m_defElastic - Re) * mp->m_defElastic.transpose() +
-         Matrix3f::Identity() * (lambda * (Je - 1) * Je));
-
-    // Matrix3f stress =
-    //     2 * m_snowModel.initialMu *
-    //     (mp->m_defElastic - svd.matrixU() * svd.matrixV().transpose()) *
-    //     (mp->m_defElastic.transpose());
-
-    // stress += m_snowModel.initialLambda * (Je - 1) * Je *
-    // Matrix3f::Identity(); stress *= exp(m_snowModel.hardeningCoefficient * (1
-    // - Jp));
-    // Matrix3f force = -mp->m_volume * stress;
+        mp->m_defPlastic * epsilon / Jp *
+        (2 * m_snowModel.initialMu * (mp->m_defElastic - Re) *
+             mp->m_defElastic.transpose() +
+         Matrix3f::Identity() * (m_snowModel.initialLambda * (Je - 1) * Je));
 
     m_grid->forEachNeighbor(mp, [Jp, mp, stress](GridNode *node) {
       node->m_force -=
@@ -195,7 +181,6 @@ void Simulator::updateDeformationGradient(double delta_t) {
 
     Matrix3f defNext = gradVelocity * mp->m_defElastic * mp->m_defPlastic;
     mp->m_defElastic = gradVelocity * mp->m_defElastic;
-    // Matrix3f defPlasticNext = mp->m_defPlastic;
 
     // Push deformations exceeding critical deformation thresholds into Fp
 
@@ -207,19 +192,6 @@ void Simulator::updateDeformationGradient(double delta_t) {
 
     mp->m_defPlastic = svd.matrixV().transpose() * sigma.inverse() *
                        svd.matrixU().transpose() * defNext;
-
-    // mp->m_defElastic = gradVelocity * mp->m_defElastic;
-    //
-    // JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
-    //
-    // Matrix3f sigma = svd.singularValues()
-    //                      .cwiseMax(1 - m_snowModel.criticalCompression)
-    //                      .cwiseMin(1 + m_snowModel.criticalStretch)
-    //                      .asDiagonal();
-    //
-    // mp->m_defElastic = svd.matrixU() * sigma * svd.matrixV();
-    // mp->m_defPlastic = svd.matrixV().transpose() * sigma.inverse() *
-    //                    svd.matrixU().transpose() * defUpdate;
   }
 }
 
