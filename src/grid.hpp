@@ -40,18 +40,25 @@ public:
   GridNode(Vector3i idx, Grid *grid);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  Vector3f getCoords() const;
+
   float basisFunction(Vector3f particlePos) const;
   Vector3f gradBasisFunction(Vector3f particlePos) const;
+
   void zeroForce();
   void addForce(Vector3f force);
-  Vector3f getVelocity();
+
+  Vector3f &velocity() { return m_velocity; };
+  Vector3f &force() { return m_force; };
 
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
 
   // Physical properties
+
   Vector3f m_velocity;
   Vector3f m_nextVelocity;
+  Vector3f m_velocityStar;
 
   double m_mass;
   Vector3f m_force;

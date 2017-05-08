@@ -5,9 +5,10 @@
 
 #include "spdlog/spdlog.h"
 
-#include "collisionObject.hpp"
+#include "collisionObject/collisionObject.hpp"
+#include "collisionObject/plane.hpp"
+
 #include "grid.hpp"
-#include "groundCO.hpp"
 #include "materialPoints.hpp"
 #include "renderer.hpp"
 #include "simulator.hpp"
@@ -58,18 +59,7 @@ void setGLFWCallbacks() {
                                  });
 }
 
-int main() {
-  nanogui::init();
-  // glEnable(GL_PROGRAM_POINT_SIZE);
-  // glEnable(GL_DEPTH_TEST);
-
-  auto logger = spdlog::stdout_color_mt("snowsim");
-
-  screen = new nanogui::Screen({1024, 768}, "Snow Simulator");
-
-  SnowModel snowModel;
-  std::vector<CollisionObject *> colliders;
-  colliders.push_back(new GroundCO(0.5));
+MaterialPoints initializePoints(int numParticles) {
   MaterialPoints points;
 
   std::default_random_engine gen1;
@@ -79,10 +69,6 @@ int main() {
   auto randomRadius = std::bind(uniform, gen1);
   auto randomPos = std::bind(normal, gen2);
 
-  const int numParticles = 1000;
-  // const int numParticles = 3e5;
-  logger->info("Generating {} random particles", numParticles);
-
   for (int i = 0; i < numParticles; i++) {
     double u = randomRadius();
     double x = randomPos();
@@ -91,13 +77,36 @@ int main() {
 
     u = 5 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 
-    Vector3f pos(u * x + 10, u * y + 50, u * z + 10);
-    Vector3f velocity = Vector3f::Zero();
+    Vector3f pos(u * x + 10, u * y + 6, u * z + 10);
+    // Vector3f velocity = Vector3f::Zero();
+    Vector3f velocity(0, -29.4, 0);
 
     points.m_materialPoints.push_back(new MaterialPoint(pos, velocity));
   }
 
-  Grid grid(Vector3f(0, 0, 0), Vector3i(100, 300, 100), 0.2);
+  return points;
+}
+
+int main() {
+  nanogui::init();
+  // glEnable(GL_PROGRAM_POINT_SIZE);
+  // glEnable(GL_DEPTH_TEST);
+
+  auto logger = spdlog::stdout_color_mt("snowsim");
+  screen = new nanogui::Screen({1024, 768}, "Snow Simulator");
+
+  SnowModel snowModel;
+
+  const int numParticles = 1e4;
+  // const int numParticles = 3e5;
+  logger->info("Generating {} random particles", numParticles);
+
+  MaterialPoints points = initializePoints(numParticles);
+
+  std::vector<CollisionObject *> colliders;
+  colliders.push_back(new Plane(Vector3f(0, 0.9, 0), Vector3f(0, 1, 0), 0.95));
+
+  Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
   renderer = new Renderer(*screen, grid, points);
   Simulator simulator(points, &grid, snowModel, colliders);
 
@@ -111,7 +120,7 @@ int main() {
   while (!glfwWindowShouldClose(screen->glfwWindow())) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    simulator.advance(1e-4);
+    simulator.advance(5e-5);
 
     renderer->render();
     screen->drawWidgets();

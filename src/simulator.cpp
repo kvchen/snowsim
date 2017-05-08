@@ -41,17 +41,17 @@ void Simulator::advance(double delta_t) {
     setParticleVolumesAndDensities();
   }
 
-  // computeGridForces();
+  computeGridForces();
   updateGridVelocities(delta_t);
 
-  // detectGridCollisions(delta_t);
+  detectGridCollisions(delta_t);
 
-  // explicitIntegration();
+  explicitIntegration();
 
   // solveLinearSystem();
-  // updateDeformationGradient(delta_t);
+  updateDeformationGradient(delta_t);
   updateParticleVelocities(delta_t);
-  // detectParticleCollisions(delta_t);
+  detectParticleCollisions(delta_t);
   updateParticlePositions(delta_t);
 
   stepCount++;
@@ -64,6 +64,7 @@ void Simulator::rasterizeParticlesToGrid() {
     node->m_mass = 0;
     node->m_velocity.setZero();
     node->m_nextVelocity.setZero();
+    node->m_velocityStar.setZero();
     node->m_force.setZero();
   }
 
@@ -113,15 +114,9 @@ void Simulator::setParticleVolumesAndDensities() {
       mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
     });
 
-    // std::cout << mp->m_mass << std::endl;
-
-    // assert(!std::isnan(mp->m_density));
-
     if (mp->m_density != 0) {
       mp->m_volume = mp->m_mass / mp->m_density;
     }
-
-    // assert(!std::isnan(mp->m_volume));
   }
 }
 
@@ -133,24 +128,21 @@ void Simulator::computeGridForces() {
     double Je = mp->m_defElastic.determinant();
 
     Matrix3f Re = svd.matrixU() * svd.matrixV().transpose();
-    // Matrix3f Se = svd.matrixV() * svd.singularValues().asDiagonal() *
-    //               svd.matrixV().transpose();
-    // Matrix3f Fe = Re * Se;
 
     double epsilon =
         exp(fmin(m_snowModel.hardeningCoefficient * (1 - Jp), 1e3));
-    // double mu = m_snowModel.initialMu * epsilon;
-    // double lambda = m_snowModel.initialLambda * epsilon;
+
+    // Compute the Cauchy stress
 
     Matrix3f stress =
-        mp->m_defPlastic * epsilon / Jp *
+        epsilon *
         (2 * m_snowModel.initialMu * (mp->m_defElastic - Re) *
              mp->m_defElastic.transpose() +
          Matrix3f::Identity() * (m_snowModel.initialLambda * (Je - 1) * Je));
 
     m_grid->forEachNeighbor(mp, [Jp, mp, stress](GridNode *node) {
       node->m_force -=
-          Jp * mp->m_volume * stress * node->gradBasisFunction(mp->m_position);
+          mp->m_volume * stress * node->gradBasisFunction(mp->m_position);
     });
   }
 }
@@ -163,19 +155,69 @@ void Simulator::updateGridVelocities(double delta_t) {
     }
 
     // Add gravitational forces
+
     node->m_nextVelocity += Vector3f(0, -9.8, 0) * delta_t;
   }
 }
 
-void Simulator::detectGridCollisions(double delta_t) {}
+void Simulator::detectGridCollisions(double delta_t) {
+  for (auto &node : m_grid->getAllNodes()) {
+    node->m_velocityStar = node->m_nextVelocity;
 
-void Simulator::explicitIntegration() {}
+    for (auto &collider : m_colliders) {
+      Vector3f coords = node->getCoords();
+
+      if (collider->phi(coords) > 0) {
+        continue;
+      }
+
+      node->m_velocityStar = collider->velocity();
+
+      // // std::cout << "GOT HERE" << std::endl;
+      //
+      // Vector3f normal = collider->normal(coords);
+      // Vector3f relVelocity = node->m_velocityStar - collider->velocity();
+      // double magnitude = relVelocity.dot(normal);
+      //
+      // if (magnitude >= 0) {
+      //   continue;
+      // }
+      //
+      // Vector3f tangentialVelocity = relVelocity - magnitude * normal;
+      //
+      // // Only apply dynamic friction if the tangential velocity is large
+      // // compared to the normal
+      //
+      // double normComponent = collider->friction() * magnitude;
+      // double tangentNorm = tangentialVelocity.norm();
+      //
+      // if (tangentNorm <= -normComponent) {
+      //   relVelocity.setZero();
+      // } else {
+      //   relVelocity = tangentialVelocity * (1 + normComponent / tangentNorm);
+      // }
+      //
+      // if (relVelocity.norm() > 1000) {
+      //   logger->error("Velocity after collision greater than 1000: {}",
+      //                 relVelocity.norm());
+      // }
+      //
+      // node->m_velocityStar = relVelocity + collider->velocity();
+    }
+  }
+}
+
+void Simulator::explicitIntegration() {
+  for (auto &node : m_grid->getAllNodes()) {
+    node->m_nextVelocity = node->m_velocityStar;
+  }
+}
 
 void Simulator::updateDeformationGradient(double delta_t) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
     Matrix3f gradVelocity = Matrix3f::Identity();
     m_grid->forEachNeighbor(mp, [mp, delta_t, &gradVelocity](GridNode *node) {
-      gradVelocity += delta_t * node->getVelocity() *
+      gradVelocity += delta_t * node->velocity() *
                       node->gradBasisFunction(mp->m_position).transpose();
     });
 
@@ -195,9 +237,6 @@ void Simulator::updateDeformationGradient(double delta_t) {
   }
 }
 
-/**
- * Update the particle velocities according to PIC and FLIP.
- */
 void Simulator::updateParticleVelocities(double delta_t, float alpha) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
     Vector3f velocityPIC = Vector3f::Zero();
@@ -211,37 +250,43 @@ void Simulator::updateParticleVelocities(double delta_t, float alpha) {
           velocityFLIP += (node->m_nextVelocity - node->m_velocity) * weight;
         });
 
-    // IOFormat InlineFormat(StreamPrecision, DontAlignCols, ", ", ", ", "", "",
-    //                       "(", ")");
-    //
-    // Vector3f newVelocity = (1 - alpha) * velocityPIC + alpha * velocityFLIP;
-    // std::cout << "Old velocity: " << mp->m_velocity.format(InlineFormat)
-    //           << " , New velocity: " << newVelocity.format(InlineFormat)
-    //           << std::endl;
-
     mp->m_velocity = (1 - alpha) * velocityPIC + alpha * velocityFLIP;
   }
 }
 
 void Simulator::detectParticleCollisions(double delta_t) {
-  for (auto &co : m_colliders) {
-    for (auto &mp : m_materialPoints.m_materialPoints) {
-      Vector3f position = mp->m_position + delta_t * mp->m_velocity;
-      if (co->phi(position) <= 0) {
-        Vector3f normal = co->normal(position);
-        Vector3f relVelocity = mp->m_velocity - co->m_velocity;
-        double magnitude = relVelocity.transpose() * normal;
-        if (magnitude < 0) {
-          Vector3f tangent = relVelocity - normal * magnitude;
-          if (tangent.norm() <= -co->m_friction * magnitude) {
-            relVelocity.setZero();
-          } else {
-            relVelocity =
-                tangent + co->m_friction * magnitude * tangent / tangent.norm();
-          }
-        }
-        mp->m_velocity = relVelocity + co->m_velocity;
+  for (auto &mp : m_materialPoints.m_materialPoints) {
+    for (auto &collider : m_colliders) {
+      Vector3f position = mp->m_position;
+      if (collider->phi(position) > 0) {
+        continue;
       }
+
+      mp->m_velocity = collider->velocity();
+
+      // Vector3f normal = collider->normal(position);
+      // Vector3f relVelocity = mp->m_velocity - collider->velocity();
+      //
+      // double magnitude = relVelocity.dot(normal);
+      // if (magnitude >= 0) {
+      //   continue;
+      // }
+      //
+      // Vector3f tangentialVelocity = relVelocity - magnitude * normal;
+      //
+      // // Only apply dynamic friction if the tangential velocity is large
+      // // compared to the normal
+      //
+      // double normComponent = collider->friction() * magnitude;
+      // double tangentNorm = tangentialVelocity.norm();
+      //
+      // if (tangentNorm <= -normComponent) {
+      //   relVelocity.setZero();
+      // } else {
+      //   relVelocity = tangentialVelocity * (1 + normComponent / tangentNorm);
+      // }
+      //
+      // mp->m_velocity = relVelocity + collider->velocity();
     }
   }
 }
@@ -254,14 +299,9 @@ void Simulator::detectParticleCollisions(double delta_t) {
 void Simulator::updateParticlePositions(double delta_t) {
   for (auto &mp : m_materialPoints.m_materialPoints) {
     mp->m_position += delta_t * mp->m_velocity;
-    mp->m_position = mp->m_position.array().min(
-        (m_grid->m_dim.array()).cast<float>() * m_grid->m_spacing);
-    mp->m_position = mp->m_position.cwiseMax(0);
 
-    // assert(!mp->m_velocity.array().isNaN().any());
-
-    // if (!mp->m_velocity.isZero())
-    // logger->info("Velocity ({}, {}, {}) should be 0", mp->m_velocity.x(),
-    //              mp->m_velocity.y(), mp->m_velocity.z());
+    // mp->m_position = mp->m_position.array().min(
+    //     (m_grid->m_dim.array()).cast<float>() * m_grid->m_spacing);
+    // mp->m_position = mp->m_position.cwiseMax(0);
   }
 }

@@ -6,7 +6,6 @@ set(SNOWSIM_SOURCE
   main.cpp
 
   # Base classes
-  collisionObject.cpp
   # gravityField.cpp
 
   # Data classes
@@ -19,6 +18,7 @@ set(SNOWSIM_SOURCE
   simulator.cpp
 )
 
+include_directories(collisionObject)
 include_directories(include)
 
 include_directories(${NANOGUI_EXTRA_INCS})
