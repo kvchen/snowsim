@@ -75,7 +75,7 @@ MaterialPoints initializePoints(int numParticles) {
     double y = randomPos();
     double z = randomPos();
 
-    u = 5 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
+    u = 1 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 
     Vector3f pos(u * x + 10, u * y + 6, u * z + 10);
     // Vector3f velocity = Vector3f::Zero();
@@ -97,7 +97,7 @@ int main() {
 
   SnowModel snowModel;
 
-  const int numParticles = 1e3;
+  const int numParticles = 1e4;
   // const int numParticles = 3e5;
   logger->info("Generating {} random particles", numParticles);
 

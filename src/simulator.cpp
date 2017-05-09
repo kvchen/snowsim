@@ -238,9 +238,12 @@ void Simulator::updateDeformationGradient(double delta_t) {
                          .cwiseMin(1 + m_snowModel.criticalStretch)
                          .asDiagonal();
 
-    mp->m_defPlastic = svd.matrixV().transpose() * sigma.inverse() *
-                       svd.matrixU().transpose() * defNext;
-    // logger->info("Test");
+    mp->m_defPlastic =
+        svd.matrixV() * sigma.inverse() * svd.matrixU().transpose() * defNext;
+    mp->m_defElastic = svd.matrixU() * sigma * svd.matrixV().transpose();
+    if (!defNext.isApprox(mp->m_defElastic * mp->m_defPlastic)) {
+      logger->warn("Deformation update is incorrect");
+    }
   }
 }
 
