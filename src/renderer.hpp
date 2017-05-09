@@ -17,6 +17,8 @@ public:
   Renderer(Screen &screen, Grid &grid, MaterialPoints &materialPoints);
   void render();
 
+  bool isPaused() { return m_isPaused; }
+
   virtual bool cursorPosCallbackEvent(double x, double y);
   virtual bool mouseButtonCallbackEvent(int button, int action, int modifiers);
   virtual bool keyCallbackEvent(int key, int scancode, int action, int mods);
@@ -69,6 +71,8 @@ private:
 
   int m_screenWidth;
   int m_screenHeight;
+
+  bool m_isPaused = false;
 };
 
 } // namespace SnowSimulator

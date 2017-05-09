@@ -124,7 +124,9 @@ int main() {
   while (!glfwWindowShouldClose(screen->glfwWindow())) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    simulator.advance(1e-3);
+    if (renderer->isPaused()) {
+      simulator.advance(1e-3);
+    }
 
     renderer->render();
     screen->drawWidgets();

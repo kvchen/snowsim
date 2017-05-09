@@ -154,7 +154,7 @@ bool Renderer::keyCallbackEvent(int key, int scancode, int action, int mods) {
       break;
     case 'p':
     case 'P':
-      // is_paused = !is_paused;
+      m_isPaused = !m_isPaused;
       break;
     }
   }
