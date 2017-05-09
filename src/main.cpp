@@ -97,14 +97,16 @@ int main() {
 
   SnowModel snowModel;
 
-  const int numParticles = 1e4;
+  const int numParticles = 1e3;
   // const int numParticles = 3e5;
   logger->info("Generating {} random particles", numParticles);
 
   MaterialPoints points = initializePoints(numParticles);
 
   std::vector<CollisionObject *> colliders;
-  colliders.push_back(new Plane(Vector3f(0, 0.9, 0), Vector3f(0, 1, 0), 0.95));
+  Plane *groundPlane = new Plane(Vector3f(0, 0.9, 0), Vector3f(0, 1, 0), 0.05);
+
+  colliders.push_back(groundPlane);
 
   Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
   renderer = new Renderer(*screen, grid, points);
@@ -120,7 +122,7 @@ int main() {
   while (!glfwWindowShouldClose(screen->glfwWindow())) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    simulator.advance(5e-5);
+    simulator.advance(1e-4);
 
     renderer->render();
     screen->drawWidgets();

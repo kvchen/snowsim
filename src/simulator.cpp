@@ -60,7 +60,7 @@ void Simulator::advance(double delta_t) {
 void Simulator::rasterizeParticlesToGrid() {
   // Reset all node properties
 
-  for (auto &node : m_grid->m_gridNodes) {
+  for (auto &node : m_grid->nodes()) {
     node->m_mass = 0;
     node->m_velocity.setZero();
     node->m_nextVelocity.setZero();
@@ -70,29 +70,42 @@ void Simulator::rasterizeParticlesToGrid() {
 
   // Place all particles in their updated cells
 
-  for (auto &cell : m_grid->m_gridCells) {
+  // TODO(kvchen): Comment this out once we fix this bug
+
+  // for (auto &mp : m_materialPoints.m_materialPoints) {
+  //   Vector3f idx = (mp->m_position.array() / m_grid->m_spacing).floor();
+  //   int i = m_grid->vectorToIdx(idx.cast<int>());
+  //
+  //   if (i < 0 || i >= m_grid->m_gridCells.size()) {
+  //     logger->error("Particle index {} exceeds grid boundaries", i);
+  //     std::cout << *mp << std::endl;
+  //
+  //     logger->error("Other particles in the same cell as invalid particle:");
+  //     for (auto &other : mp->cell()->particles()) {
+  //       if (other == mp) {
+  //         continue;
+  //       }
+  //       logger->error("Distance to invalid particle: {}",
+  //                     (other->position() - mp->position()).norm());
+  //       std::cout << *other << std::endl;
+  //     }
+  //   }
+  // }
+
+  for (auto &cell : m_grid->cells()) {
     cell->clear();
   }
 
-  for (auto &mp : m_materialPoints.m_materialPoints) {
-    Vector3f idx = (mp->m_position.array() / m_grid->m_spacing).floor();
-    int i = m_grid->vectorToIdx(idx.cast<int>());
-
-    // TODO(kvchen): Comment this out once we fix this bug
-
-    if (i < 0 || i >= m_grid->m_gridCells.size()) {
-      logger->error("Particle index {} exceeds grid boundaries", i);
-      std::cout << *mp << std::endl;
-    }
-
-    m_grid->m_gridCells[i]->addMaterialPoint(mp);
+  for (auto &mp : m_materialPoints.particles()) {
+    int idx = m_grid->getParticleIdx(mp);
+    m_grid->cells()[idx]->addMaterialPoint(mp);
   }
 
-  for (auto &mp : m_materialPoints.m_materialPoints) {
+  for (auto &mp : m_materialPoints.particles()) {
     m_grid->forEachNeighbor(mp, [&mp](GridNode *node) {
-      double w = node->basisFunction(mp->m_position);
-      node->m_mass += mp->m_mass * w;
-      node->m_velocity += mp->m_velocity * mp->m_mass * w;
+      double w = node->basisFunction(mp->position());
+      node->m_mass += mp->mass() * w;
+      node->m_velocity += mp->velocity() * mp->mass() * w;
     });
   }
 
@@ -165,44 +178,34 @@ void Simulator::detectGridCollisions(double delta_t) {
     node->m_velocityStar = node->m_nextVelocity;
 
     for (auto &collider : m_colliders) {
-      Vector3f coords = node->getCoords();
-
-      if (collider->phi(coords) > 0) {
+      Vector3f position = node->position();
+      if (collider->phi(position) > 0) {
         continue;
       }
 
-      node->m_velocityStar = collider->velocity();
+      Vector3f normal = collider->normal(position);
+      Vector3f relVelocity = node->m_velocityStar - collider->velocity();
+      double magnitude = relVelocity.dot(normal);
 
-      // // std::cout << "GOT HERE" << std::endl;
-      //
-      // Vector3f normal = collider->normal(coords);
-      // Vector3f relVelocity = node->m_velocityStar - collider->velocity();
-      // double magnitude = relVelocity.dot(normal);
-      //
-      // if (magnitude >= 0) {
-      //   continue;
-      // }
-      //
-      // Vector3f tangentialVelocity = relVelocity - magnitude * normal;
-      //
-      // // Only apply dynamic friction if the tangential velocity is large
-      // // compared to the normal
-      //
-      // double normComponent = collider->friction() * magnitude;
-      // double tangentNorm = tangentialVelocity.norm();
-      //
-      // if (tangentNorm <= -normComponent) {
-      //   relVelocity.setZero();
-      // } else {
-      //   relVelocity = tangentialVelocity * (1 + normComponent / tangentNorm);
-      // }
-      //
-      // if (relVelocity.norm() > 1000) {
-      //   logger->error("Velocity after collision greater than 1000: {}",
-      //                 relVelocity.norm());
-      // }
-      //
-      // node->m_velocityStar = relVelocity + collider->velocity();
+      if (magnitude >= 0) {
+        continue;
+      }
+
+      Vector3f tangentialVelocity = relVelocity - magnitude * normal;
+
+      // Only apply dynamic friction if the tangential velocity is large
+      // compared to the normal
+
+      double normComponent = collider->friction() * magnitude;
+      double tangentNorm = tangentialVelocity.norm();
+
+      if (tangentNorm <= -normComponent) {
+        relVelocity.setZero();
+      } else {
+        relVelocity = tangentialVelocity * (1 + normComponent / tangentNorm);
+      }
+
+      node->m_velocityStar = relVelocity + collider->velocity();
     }
   }
 }
@@ -210,6 +213,7 @@ void Simulator::detectGridCollisions(double delta_t) {
 void Simulator::explicitIntegration() {
   for (auto &node : m_grid->getAllNodes()) {
     node->m_nextVelocity = node->m_velocityStar;
+    // std::cout << node->m_nextVelocity << std::endl;
   }
 }
 
@@ -262,31 +266,37 @@ void Simulator::detectParticleCollisions(double delta_t) {
         continue;
       }
 
-      mp->m_velocity = collider->velocity();
+      // std::cout << mp->position() << std::endl;
 
-      // Vector3f normal = collider->normal(position);
-      // Vector3f relVelocity = mp->m_velocity - collider->velocity();
-      //
-      // double magnitude = relVelocity.dot(normal);
-      // if (magnitude >= 0) {
-      //   continue;
-      // }
-      //
-      // Vector3f tangentialVelocity = relVelocity - magnitude * normal;
-      //
-      // // Only apply dynamic friction if the tangential velocity is large
-      // // compared to the normal
-      //
-      // double normComponent = collider->friction() * magnitude;
-      // double tangentNorm = tangentialVelocity.norm();
-      //
+      Vector3f normal = collider->normal(position);
+      Vector3f relVelocity = mp->velocity() - collider->velocity();
+
+      // std::cout << collider->velocity() << std::endl;
+
+      double magnitude = relVelocity.dot(normal);
+      if (magnitude >= 0) {
+        continue;
+      }
+
+      Vector3f tangentialVelocity = relVelocity - magnitude * normal;
+
+      // Only apply dynamic friction if the tangential velocity is large
+      // compared to the normal
+
+      double normComponent = collider->friction() * magnitude;
+      double tangentNorm = tangentialVelocity.norm();
+
       // if (tangentNorm <= -normComponent) {
-      //   relVelocity.setZero();
+      relVelocity.setZero();
       // } else {
-      //   relVelocity = tangentialVelocity * (1 + normComponent / tangentNorm);
+      //   std::cout << "GOT HERE" << std::endl;
+      //   relVelocity = tangentialVelocity * (1 + normComponent /
+      //   tangentNorm);
       // }
-      //
+
+      // std::cout << "BEFORE: " << mp->m_velocity << std::endl;
       // mp->m_velocity = relVelocity + collider->velocity();
+      // std::cout << "AFTER: " << mp->m_velocity << std::endl;
     }
   }
 }

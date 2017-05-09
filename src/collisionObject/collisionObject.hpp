@@ -9,19 +9,13 @@ namespace SnowSimulator {
 
 class CollisionObject {
 public:
-  virtual float phi(const Vector3f &x) const = 0;
+  virtual double phi(const Vector3f &x) = 0;
 
-  virtual Vector3f normal(const Vector3f &x) const {
-    return Eigen::Vector3f::Zero();
-  };
+  virtual Vector3f normal(const Vector3f &x) = 0;
 
-  Vector3f velocity() { return m_velocity; }
+  virtual Vector3f velocity() = 0;
 
-  double friction() { return m_friction; }
-
-private:
-  Vector3f m_velocity;
-  double m_friction;
+  virtual double friction() = 0;
 };
 
 } // namespace SnowSimulator

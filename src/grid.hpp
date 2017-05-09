@@ -31,6 +31,8 @@ public:
   void addMaterialPoint(MaterialPoint *materialPoint);
   void clear();
 
+  std::vector<MaterialPoint *> &particles() { return m_materialPoints; }
+
   GridNode *m_node; // Pointer to the immediately adjacent GridNode
   std::vector<MaterialPoint *> m_materialPoints;
 };
@@ -40,7 +42,7 @@ public:
   GridNode(Vector3i idx, Grid *grid);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  Vector3f getCoords() const;
+  Vector3f position() const;
 
   float basisFunction(Vector3f particlePos) const;
   Vector3f gradBasisFunction(Vector3f particlePos) const;
@@ -105,6 +107,21 @@ public:
   inline int vectorToIdx(const Vector3i &idx) {
     return idx.x() + m_dim.x() * (idx.y() + m_dim.y() * idx.z());
   }
+
+  int getParticleIdx(MaterialPoint *mp) {
+    Vector3i idx = (mp->position().array() / m_spacing).cast<int>();
+    return vectorToIdx(idx);
+  }
+
+  // Accessor methods
+
+  Vector3f &origin() { return m_origin; }
+  Vector3i &dim() { return m_dim; }
+
+  float spacing() { return m_spacing; }
+
+  std::vector<GridNode *> &nodes() { return m_gridNodes; }
+  std::vector<GridCell *> &cells() { return m_gridCells; }
 
   // Grid sizing and location
 

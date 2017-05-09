@@ -25,6 +25,16 @@ public:
   }
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  double mass() { return m_mass; }
+  double volume() { return m_volume; }
+  double density() { return m_density; }
+
+  Vector3f &position() { return m_position; }
+  Vector3f &velocity() { return m_velocity; }
+  Matrix3f &elasticDeformation() { return m_defElastic; }
+  Matrix3f &plasticDeformation() { return m_defPlastic; }
+  GridCell *cell() { return m_cell; }
+
   Vector3f m_position;
   Vector3f m_velocity;
   Matrix3f m_defElastic;
@@ -59,6 +69,7 @@ public:
 class MaterialPoints {
 public:
   MaterialPoints(){};
+  std::vector<MaterialPoint *> &particles() { return m_materialPoints; }
 
   std::vector<MaterialPoint *> m_materialPoints;
 };

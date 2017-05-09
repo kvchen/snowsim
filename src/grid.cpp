@@ -31,7 +31,7 @@ GridNode::GridNode(Vector3i idx, Grid *grid)
     : m_idx(idx), m_grid(grid), m_mass(0), m_velocity(Vector3f::Zero()),
       m_nextVelocity(Vector3f::Zero()), m_force(Vector3f::Zero()) {}
 
-Vector3f GridNode::getCoords() const {
+Vector3f GridNode::position() const {
   return m_idx.cast<float>() * m_grid->m_spacing;
 }
 
