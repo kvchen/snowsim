@@ -71,6 +71,7 @@ public:
   MaterialPoints(){};
   std::vector<MaterialPoint *> &particles() { return m_materialPoints; }
 
+private:
   std::vector<MaterialPoint *> m_materialPoints;
 };
 

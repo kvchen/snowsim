@@ -81,7 +81,7 @@ MaterialPoints initializePoints(int numParticles) {
     // Vector3f velocity = Vector3f::Zero();
     Vector3f velocity(0, -29.4, 0);
 
-    points.m_materialPoints.push_back(new MaterialPoint(pos, velocity));
+    points.particles().push_back(new MaterialPoint(pos, velocity));
   }
 
   return points;
@@ -105,8 +105,10 @@ int main() {
 
   std::vector<CollisionObject *> colliders;
   Plane *groundPlane = new Plane(Vector3f(0, 0.9, 0), Vector3f(0, 1, 0), 0.05);
+  Plane *leftWall = new Plane(Vector3f(0.5, 0, 0), Vector3f(1, 0, 0), 0.05);
 
   colliders.push_back(groundPlane);
+  colliders.push_back(leftWall);
 
   Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
   renderer = new Renderer(*screen, grid, points);
@@ -122,7 +124,7 @@ int main() {
   while (!glfwWindowShouldClose(screen->glfwWindow())) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    simulator.advance(1e-4);
+    simulator.advance(1e-3);
 
     renderer->render();
     screen->drawWidgets();

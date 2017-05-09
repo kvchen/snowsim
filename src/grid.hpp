@@ -51,6 +51,7 @@ public:
   void addForce(Vector3f force);
 
   Vector3f &velocity() { return m_velocity; };
+  Vector3f &nextVelocity() { return m_nextVelocity; };
   Vector3f &force() { return m_force; };
 
   std::vector<GridNode *> m_neighbors;

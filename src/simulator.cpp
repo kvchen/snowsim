@@ -47,8 +47,8 @@ void Simulator::advance(double delta_t) {
   detectGridCollisions(delta_t);
 
   explicitIntegration();
-
   // solveLinearSystem();
+
   updateDeformationGradient(delta_t);
   updateParticleVelocities(delta_t);
   detectParticleCollisions(delta_t);
@@ -72,7 +72,7 @@ void Simulator::rasterizeParticlesToGrid() {
 
   // TODO(kvchen): Comment this out once we fix this bug
 
-  // for (auto &mp : m_materialPoints.m_materialPoints) {
+  // for (auto &mp : m_materialPoints.particles()) {
   //   Vector3f idx = (mp->m_position.array() / m_grid->m_spacing).floor();
   //   int i = m_grid->vectorToIdx(idx.cast<int>());
   //
@@ -109,7 +109,7 @@ void Simulator::rasterizeParticlesToGrid() {
     });
   }
 
-  for (auto &node : m_grid->m_gridNodes) {
+  for (auto &node : m_grid->nodes()) {
     if (node->m_mass > 0) {
       node->m_velocity /= node->m_mass;
     }
@@ -119,12 +119,13 @@ void Simulator::rasterizeParticlesToGrid() {
 void Simulator::setParticleVolumesAndDensities() {
   logger->info("Setting initial particle volumes and densities");
 
-  for (auto const &mp : m_materialPoints.m_materialPoints) {
+  for (auto const &mp : m_materialPoints.particles()) {
     mp->m_volume = 0;
     mp->m_density = 0;
 
-    m_grid->forEachNeighbor(mp, [&mp](GridNode *node) {
-      mp->m_density += node->m_mass * node->basisFunction(mp->m_position);
+    m_grid->forEachNeighbor(mp, [&](GridNode *node) {
+      mp->m_density += node->m_mass * node->basisFunction(mp->m_position) /
+                       pow(m_grid->m_spacing, 3);
     });
 
     if (mp->m_density != 0) {
@@ -134,7 +135,7 @@ void Simulator::setParticleVolumesAndDensities() {
 }
 
 void Simulator::computeGridForces() {
-  for (auto &mp : m_materialPoints.m_materialPoints) {
+  for (auto &mp : m_materialPoints.particles()) {
     JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
 
     double Jp = mp->m_defPlastic.determinant();
@@ -146,6 +147,7 @@ void Simulator::computeGridForces() {
         exp(fmin(m_snowModel.hardeningCoefficient * (1 - Jp), 1e3));
 
     // Compute the Cauchy stress
+    // mu * 2 * (fe - re)_f
 
     Matrix3f stress =
         epsilon *
@@ -153,7 +155,7 @@ void Simulator::computeGridForces() {
              mp->m_defElastic.transpose() +
          Matrix3f::Identity() * (m_snowModel.initialLambda * (Je - 1) * Je));
 
-    m_grid->forEachNeighbor(mp, [Jp, mp, stress](GridNode *node) {
+    m_grid->forEachNeighbor(mp, [mp, &stress](GridNode *node) {
       node->m_force -=
           mp->m_volume * stress * node->gradBasisFunction(mp->m_position);
     });
@@ -218,10 +220,10 @@ void Simulator::explicitIntegration() {
 }
 
 void Simulator::updateDeformationGradient(double delta_t) {
-  for (auto &mp : m_materialPoints.m_materialPoints) {
+  for (auto &mp : m_materialPoints.particles()) {
     Matrix3f gradVelocity = Matrix3f::Identity();
     m_grid->forEachNeighbor(mp, [mp, delta_t, &gradVelocity](GridNode *node) {
-      gradVelocity += delta_t * node->velocity() *
+      gradVelocity += delta_t * node->nextVelocity() *
                       node->gradBasisFunction(mp->m_position).transpose();
     });
 
@@ -238,11 +240,12 @@ void Simulator::updateDeformationGradient(double delta_t) {
 
     mp->m_defPlastic = svd.matrixV().transpose() * sigma.inverse() *
                        svd.matrixU().transpose() * defNext;
+    // logger->info("Test");
   }
 }
 
 void Simulator::updateParticleVelocities(double delta_t, float alpha) {
-  for (auto &mp : m_materialPoints.m_materialPoints) {
+  for (auto &mp : m_materialPoints.particles()) {
     Vector3f velocityPIC = Vector3f::Zero();
     Vector3f velocityFLIP = mp->m_velocity;
 
@@ -259,7 +262,7 @@ void Simulator::updateParticleVelocities(double delta_t, float alpha) {
 }
 
 void Simulator::detectParticleCollisions(double delta_t) {
-  for (auto &mp : m_materialPoints.m_materialPoints) {
+  for (auto &mp : m_materialPoints.particles()) {
     for (auto &collider : m_colliders) {
       Vector3f position = mp->m_position;
       if (collider->phi(position) > 0) {
@@ -307,7 +310,7 @@ void Simulator::detectParticleCollisions(double delta_t) {
  * to the next delta_t.
  */
 void Simulator::updateParticlePositions(double delta_t) {
-  for (auto &mp : m_materialPoints.m_materialPoints) {
+  for (auto &mp : m_materialPoints.particles()) {
     mp->m_position += delta_t * mp->m_velocity;
 
     // mp->m_position = mp->m_position.array().min(
