@@ -3,6 +3,7 @@
 #include <random>
 #include <stdlib.h>
 
+#include "PerlinNoise.hpp"
 #include "spdlog/spdlog.h"
 
 #include "collisionObject/collisionObject.hpp"
@@ -69,19 +70,30 @@ MaterialPoints initializePoints(int numParticles) {
   auto randomRadius = std::bind(uniform, gen1);
   auto randomPos = std::bind(normal, gen2);
 
+  const siv::PerlinNoise perlin(12345);
+
   for (int i = 0; i < numParticles; i++) {
     double u = randomRadius();
     double x = randomPos();
     double y = randomPos();
     double z = randomPos();
 
-    u = 1 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
+    u = 3 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 
-    Vector3f pos(u * x + 10, u * y + 6, u * z + 10);
+    Vector3f pos, velocity;
+
+    if (i % 2 == 0) {
+      pos << u * x + 16, u * y + 11.5, u * z + 10;
+      velocity << -29.4, 0, 0;
+    } else {
+      pos << u * x + 4, u * y + 8.5, u * z + 10;
+      velocity << 29.4, 0, 0;
+    }
+
     // Vector3f velocity = Vector3f::Zero();
-    Vector3f velocity(0, -29.4, 0);
-
-    points.particles().push_back(new MaterialPoint(pos, velocity));
+    // Vector3f velocity(0, -29.4, 0);
+    double mass = fabs(perlin.noise(pos.x(), pos.y(), pos.z()));
+    points.particles().push_back(new MaterialPoint(mass, pos, velocity));
   }
 
   return points;
@@ -102,15 +114,28 @@ int main() {
   logger->info("Generating {} random particles", numParticles);
 
   MaterialPoints points = initializePoints(numParticles);
+  Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
+
+  Vector3f bboxMin = grid.origin();
+  Vector3f bboxMax = bboxMin + grid.extent();
+  double bboxFriction = 0.05;
 
   std::vector<CollisionObject *> colliders;
-  Plane *groundPlane = new Plane(Vector3f(0, 0.9, 0), Vector3f(0, 1, 0), 0.05);
-  Plane *leftWall = new Plane(Vector3f(0.5, 0, 0), Vector3f(1, 0, 0), 0.05);
 
-  colliders.push_back(groundPlane);
-  colliders.push_back(leftWall);
+  Plane *ground = new Plane(bboxMin, Vector3f(0, 1, 0), bboxFriction);
+  Plane *top = new Plane(bboxMax, Vector3f(0, -1, 0), bboxFriction);
+  Plane *left = new Plane(bboxMin, Vector3f(1, 0, 0), bboxFriction);
+  Plane *right = new Plane(bboxMax, Vector3f(-1, 0, 0), bboxFriction);
+  Plane *front = new Plane(bboxMin, Vector3f(0, 0, 1), bboxFriction);
+  Plane *back = new Plane(bboxMax, Vector3f(0, 0, -1), bboxFriction);
 
-  Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
+  colliders.push_back(ground);
+  colliders.push_back(top);
+  colliders.push_back(left);
+  colliders.push_back(right);
+  colliders.push_back(front);
+  colliders.push_back(back);
+
   renderer = new Renderer(*screen, grid, points);
   Simulator simulator(points, &grid, snowModel, colliders);
 

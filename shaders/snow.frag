@@ -3,10 +3,11 @@
 uniform vec4 in_color;
 
 in vec4 vertex;
-in vec4 normal;
+in float mass;
 
 out vec4 color;
 
 void main() {
   color = in_color;
+  color.w *= mass;
 }

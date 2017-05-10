@@ -118,6 +118,7 @@ public:
 
   Vector3f &origin() { return m_origin; }
   Vector3i &dim() { return m_dim; }
+  Vector3f extent() { return m_dim.cast<float>() * m_spacing; }
 
   float spacing() { return m_spacing; }
 

@@ -18,8 +18,8 @@ class MaterialPoints;
 
 class MaterialPoint {
 public:
-  MaterialPoint(Vector3f &position, Vector3f &velocity)
-      : m_position(position), m_velocity(velocity) {
+  MaterialPoint(double mass, Vector3f &position, Vector3f &velocity)
+      : m_mass(mass), m_position(position), m_velocity(velocity) {
     m_defElastic = Matrix3f::Identity();
     m_defPlastic = Matrix3f::Identity();
   }
@@ -42,7 +42,7 @@ public:
 
   GridCell *m_cell;
 
-  double m_mass = 1.0;
+  double m_mass;
   double m_volume;
   double m_density;
 

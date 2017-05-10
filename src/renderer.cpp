@@ -13,6 +13,9 @@ Renderer::Renderer(Screen &screen, Grid &grid, MaterialPoints &materialPoints)
   m_snowShader.initFromFiles("snow_shader", "../shaders/snow.vert",
                              "../shaders/snow.frag");
 
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
+
   // Vector3d avg_pm_position(0, 0, 0);
 
   Vector3d gridDimensions = grid.m_dim.cast<double>();
@@ -67,9 +70,11 @@ void Renderer::render() {
 
   int numParticles = m_materialPoints.particles().size();
   MatrixXf particlePositions(3, numParticles);
+  RowVectorXf masses(numParticles);
 
   for (int i = 0; i < numParticles; i++) {
     particlePositions.col(i) = m_materialPoints.particles()[i]->m_position;
+    masses(i) = m_materialPoints.particles()[i]->mass();
   }
 
   // MatrixXf positions(3, 1000);
@@ -84,6 +89,7 @@ void Renderer::render() {
   // }
 
   m_snowShader.uploadAttrib("in_position", particlePositions);
+  m_snowShader.uploadAttrib("in_mass", masses);
   m_snowShader.drawArray(GL_POINTS, 0, numParticles);
 
   // Draw the grid bounding box
