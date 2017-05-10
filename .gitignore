@@ -4,6 +4,9 @@
 # Simulation temporary files
 renders
 volumes
+*.png
+*.mp4
+*.vol
 
 # Compiled Object files
 build
