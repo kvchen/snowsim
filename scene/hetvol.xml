@@ -9,12 +9,18 @@
 		<string name="method" value="woodcock"/>
 
 		<volume name="density" type="gridvolume">
-			<string name="filename" value="snowball.vol"/>
+			<boolean name="sendData" value="true"/>
+			<string name="filename" value="$volfile"/>
 		</volume>
 
 		<volume name="albedo" type="constvolume">
 			<spectrum name="value" value="0.9"/>
 		</volume>
+
+		<phase type="hg">
+			<float name="g" value="0.5"/>
+		</phase>
+
 		<float name="scale" value="100"/>
 	</medium>
 
@@ -29,7 +35,7 @@
 		<string name="filename" value="plane.obj"/>
 
 		<bsdf type="diffuse">
-			<rgb name="diffuseReflectance" value=".2, .2, .3"/>
+			<rgb name="diffuseReflectance" value=".1, .1, .1"/>
 		</bsdf>
 		<transform name="toWorld">
 			<translate y=".48"/>
@@ -37,21 +43,24 @@
 	</shape>
 
 	<sensor type="perspective">
-		<float name="focusDistance" value="1.49864"/>
 		<float name="fov" value="45.8402"/>
 		<string name="fovAxis" value="x"/>
 		<transform name="toWorld">
 			<scale x="-1"/>
 
-			<lookat target="-0.146013, 0.147413, -0.797454" origin="-0.336585, 0.146944, -1.77913" up="0.000502585, -1, 0.000380188"/>
+			<lookat target="-0.122584, 0.0172552, -0.740557" origin="-0.302652, -0.260867, -1.68407" up="0.0545256, -0.960543, 0.272735"/>
 		</transform>
 
 		<sampler type="ldsampler">
-			<integer name="sampleCount" value="256"/>
+			<integer name="sampleCount" value="32"/>
 		</sampler>
 
-		<film type="hdrfilm">
+		<film type="ldrfilm">
+			<boolean name="banner" value="false"/>
+			<float name="exposure" value="0"/>
+			<float name="gamma" value="-1"/>
 			<integer name="height" value="576"/>
+			<string name="tonemapMethod" value="gamma"/>
 			<integer name="width" value="768"/>
 
 			<rfilter type="gaussian"/>

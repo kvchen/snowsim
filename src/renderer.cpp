@@ -61,7 +61,9 @@ Renderer::Renderer(Screen &screen, Grid &grid, MaterialPoints &materialPoints)
 void Renderer::render() {
   m_snowShader.bind();
 
-  m_camera.rotate_by(0, 1.0e-3);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  // m_camera.rotate_by(0, 1.0e-3);
 
   Matrix4d view = getViewMatrix();
   Matrix4d projection = getProjectionMatrix();
@@ -69,16 +71,109 @@ void Renderer::render() {
   Matrix4f modelViewProjection = (projection * view).cast<float>();
 
   m_snowShader.setUniform("modelViewProjection", modelViewProjection);
+
+  int numNodes = m_grid.dim().prod();
+  auto nodes = m_grid.nodes();
+
+  float s = m_grid.spacing();
+
+  MatrixXf positions(3, numNodes * 36);
+  RowVectorXf masses(numNodes * 36);
+
+  for (int i = 0; i < nodes.size(); i++) {
+    auto node = nodes[i];
+    Vector3f position = node->position();
+
+    double mass = node->mass();
+    if (mass > 1) {
+      mass = 1;
+    } else if (mass < 0) {
+      mass = 0;
+    }
+
+    int idx = i * 36;
+
+    for (int j = 0; j < 36; j++) {
+      masses(idx + j) = mass;
+    }
+
+    float x = position.x(), y = position.y(), z = position.z();
+
+    positions.col(idx) << x, y, z;
+    positions.col(idx + 1) << x, y + s, z;
+    positions.col(idx + 2) << x + s, y, z;
+
+    positions.col(idx + 3) << x + s, y, z;
+    positions.col(idx + 4) << x, y + s, z;
+    positions.col(idx + 5) << x + s, y + s, z;
+
+    positions.col(idx + 6) << x, y, z + s;
+    positions.col(idx + 7) << x, y + s, z + s;
+    positions.col(idx + 8) << x + s, y, z + s;
+
+    positions.col(idx + 9) << x + s, y, z + s;
+    positions.col(idx + 10) << x, y + s, z + s;
+    positions.col(idx + 11) << x + s, y + s, z + s;
+
+    positions.col(idx + 12) << x, y, z;
+    positions.col(idx + 13) << x, y, z + s;
+    positions.col(idx + 14) << x, y + s, z;
+
+    positions.col(idx + 15) << x, y + s, z;
+    positions.col(idx + 16) << x, y, z + s;
+    positions.col(idx + 17) << x, y + s, z + s;
+
+    positions.col(idx + 18) << x + s, y, z;
+    positions.col(idx + 19) << x, y, z + s;
+    positions.col(idx + 20) << x + s, y + s, z;
+
+    positions.col(idx + 21) << x + s, y + s, z;
+    positions.col(idx + 22) << x, y, z + s;
+    positions.col(idx + 23) << x, y + s, z + s;
+
+    positions.col(idx + 24) << x, y, z;
+    positions.col(idx + 25) << x, y, z + s;
+    positions.col(idx + 26) << x + s, y, z;
+
+    positions.col(idx + 27) << x + s, y, z;
+    positions.col(idx + 28) << x, y, z + s;
+    positions.col(idx + 29) << x + s, y, z + s;
+
+    positions.col(idx + 30) << x, y + s, z;
+    positions.col(idx + 31) << x, y + s, z + s;
+    positions.col(idx + 32) << x + s, y + s, z;
+
+    positions.col(idx + 33) << x + s, y + s, z;
+    positions.col(idx + 34) << x, y + s, z + s;
+    positions.col(idx + 35) << x + s, y + s, z + s;
+  }
+
   m_snowShader.setUniform("in_color", Color(1.0f, 1.0f, 1.0f, 1.0f));
 
-  int numParticles = m_materialPoints.particles().size();
-  MatrixXf particlePositions(3, numParticles);
-  RowVectorXf masses(numParticles);
+  m_snowShader.uploadAttrib("in_position", positions);
+  m_snowShader.uploadAttrib("in_mass", masses);
 
-  for (int i = 0; i < numParticles; i++) {
-    particlePositions.col(i) = m_materialPoints.particles()[i]->m_position;
-    masses(i) = m_materialPoints.particles()[i]->mass();
-  }
+  // GLint massIdx = m_snowShader.attrib("in_mass");
+  // glVertexBindingDivisor(massIdx, 36);
+
+  m_snowShader.drawArray(GL_TRIANGLES, 0, numNodes * 36);
+
+  // for (auto &node : m_grid.nodes()) {
+  //   // float density = node->density();
+  //   double mass = std::clamp(node->mass(), 0, 1);
+  //   positions()
+  //
+  //       idx++
+  // }
+
+  // int numParticles = m_materialPoints.particles().size();
+  // MatrixXf particlePositions(3, numParticles);
+  // RowVectorXf masses(numParticles);
+  //
+  // for (int i = 0; i < numParticles; i++) {
+  //   particlePositions.col(i) = m_materialPoints.particles()[i]->m_position;
+  //   masses(i) = m_materialPoints.particles()[i]->mass();
+  // }
 
   // MatrixXf positions(3, 1000);
   // int idx = 0;
@@ -91,55 +186,55 @@ void Renderer::render() {
   //   }
   // }
 
-  m_snowShader.uploadAttrib("in_position", particlePositions);
-  m_snowShader.uploadAttrib("in_mass", masses);
-  m_snowShader.drawArray(GL_POINTS, 0, numParticles);
+  // m_snowShader.uploadAttrib("in_position", particlePositions);
+  // m_snowShader.uploadAttrib("in_mass", masses);
+  // m_snowShader.drawArray(GL_POINTS, 0, numParticles);
 
   // Draw the grid bounding box
 
-  Vector3f bboxMin = m_grid.m_origin;
-  Vector3f bboxMax = bboxMin + m_grid.m_dim.cast<float>() * m_grid.m_spacing;
-
-  MatrixXf bboxVertices(3, 24);
-
-  bboxVertices.col(0) = bboxMin;
-  bboxVertices.col(1) << bboxMax.x(), bboxMin.y(), bboxMin.z();
-
-  bboxVertices.col(2) = bboxMin;
-  bboxVertices.col(3) << bboxMin.x(), bboxMax.y(), bboxMin.z();
-
-  bboxVertices.col(4) = bboxMin;
-  bboxVertices.col(5) << bboxMin.x(), bboxMin.y(), bboxMax.z();
-
-  bboxVertices.col(6) << bboxMax.x(), bboxMin.y(), bboxMax.z();
-  bboxVertices.col(7) << bboxMax.x(), bboxMin.y(), bboxMin.z();
-
-  bboxVertices.col(8) << bboxMax.x(), bboxMin.y(), bboxMax.z();
-  bboxVertices.col(9) << bboxMax.x(), bboxMax.y(), bboxMax.z();
-
-  bboxVertices.col(10) << bboxMax.x(), bboxMin.y(), bboxMax.z();
-  bboxVertices.col(11) << bboxMin.x(), bboxMin.y(), bboxMax.z();
-
-  bboxVertices.col(12) << bboxMin.x(), bboxMax.y(), bboxMax.z();
-  bboxVertices.col(13) << bboxMin.x(), bboxMax.y(), bboxMin.z();
-
-  bboxVertices.col(14) << bboxMin.x(), bboxMax.y(), bboxMax.z();
-  bboxVertices.col(15) = bboxMax;
-
-  bboxVertices.col(16) << bboxMin.x(), bboxMax.y(), bboxMax.z();
-  bboxVertices.col(17) << bboxMin.x(), bboxMin.y(), bboxMax.z();
-
-  bboxVertices.col(18) << bboxMax.x(), bboxMax.y(), bboxMin.z();
-  bboxVertices.col(19) << bboxMin.x(), bboxMax.y(), bboxMin.z();
-
-  bboxVertices.col(20) << bboxMax.x(), bboxMax.y(), bboxMin.z();
-  bboxVertices.col(21) = bboxMax;
-
-  bboxVertices.col(22) << bboxMax.x(), bboxMax.y(), bboxMin.z();
-  bboxVertices.col(23) << bboxMax.x(), bboxMin.y(), bboxMin.z();
-
-  m_snowShader.uploadAttrib("in_position", bboxVertices);
-  m_snowShader.drawArray(GL_LINES, 0, 24);
+  // Vector3f bboxMin = m_grid.m_origin;
+  // Vector3f bboxMax = bboxMin + m_grid.m_dim.cast<float>() * m_grid.m_spacing;
+  //
+  // MatrixXf bboxVertices(3, 24);
+  //
+  // bboxVertices.col(0) = bboxMin;
+  // bboxVertices.col(1) << bboxMax.x(), bboxMin.y(), bboxMin.z();
+  //
+  // bboxVertices.col(2) = bboxMin;
+  // bboxVertices.col(3) << bboxMin.x(), bboxMax.y(), bboxMin.z();
+  //
+  // bboxVertices.col(4) = bboxMin;
+  // bboxVertices.col(5) << bboxMin.x(), bboxMin.y(), bboxMax.z();
+  //
+  // bboxVertices.col(6) << bboxMax.x(), bboxMin.y(), bboxMax.z();
+  // bboxVertices.col(7) << bboxMax.x(), bboxMin.y(), bboxMin.z();
+  //
+  // bboxVertices.col(8) << bboxMax.x(), bboxMin.y(), bboxMax.z();
+  // bboxVertices.col(9) << bboxMax.x(), bboxMax.y(), bboxMax.z();
+  //
+  // bboxVertices.col(10) << bboxMax.x(), bboxMin.y(), bboxMax.z();
+  // bboxVertices.col(11) << bboxMin.x(), bboxMin.y(), bboxMax.z();
+  //
+  // bboxVertices.col(12) << bboxMin.x(), bboxMax.y(), bboxMax.z();
+  // bboxVertices.col(13) << bboxMin.x(), bboxMax.y(), bboxMin.z();
+  //
+  // bboxVertices.col(14) << bboxMin.x(), bboxMax.y(), bboxMax.z();
+  // bboxVertices.col(15) = bboxMax;
+  //
+  // bboxVertices.col(16) << bboxMin.x(), bboxMax.y(), bboxMax.z();
+  // bboxVertices.col(17) << bboxMin.x(), bboxMin.y(), bboxMax.z();
+  //
+  // bboxVertices.col(18) << bboxMax.x(), bboxMax.y(), bboxMin.z();
+  // bboxVertices.col(19) << bboxMin.x(), bboxMax.y(), bboxMin.z();
+  //
+  // bboxVertices.col(20) << bboxMax.x(), bboxMax.y(), bboxMin.z();
+  // bboxVertices.col(21) = bboxMax;
+  //
+  // bboxVertices.col(22) << bboxMax.x(), bboxMax.y(), bboxMin.z();
+  // bboxVertices.col(23) << bboxMax.x(), bboxMin.y(), bboxMin.z();
+  //
+  // m_snowShader.uploadAttrib("in_position", bboxVertices);
+  // m_snowShader.drawArray(GL_LINES, 0, 24);
 }
 
 // ============================================================================
@@ -313,7 +408,7 @@ void Renderer::writeScreenshot(int stepCount) {
   tm *lt = localtime(&t);
   std::stringstream ss;
 
-  ss << "screenshot_" << std::setfill('0') << std::setw(6) << stepCount
+  ss << "../renders/render_" << std::setfill('0') << std::setw(6) << stepCount
      << ".png";
 
   std::string file = ss.str();

@@ -1,5 +1,7 @@
 #include <Eigen/Dense>
 #include <cmath>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 
 #include "simulator.hpp"
@@ -324,4 +326,51 @@ void Simulator::updateParticlePositions(double delta_t) {
     //     (m_grid->m_dim.array()).cast<float>() * m_grid->m_spacing);
     // mp->m_position = mp->m_position.cwiseMax(0);
   }
+}
+
+std::string Simulator::exportVolumeData() {
+  std::stringstream ss;
+  ss << "../volumes/density-" << std::setfill('0') << std::setw(6)
+     << m_stepCount << ".vol";
+
+  std::ofstream os(ss.str());
+
+  Vector3i dim = m_grid->dim();
+  Vector3f bboxMin = m_grid->origin();
+  Vector3f bboxMax = bboxMin + m_grid->extent();
+
+  bboxMin = Vector3f(-0.5, -0.5, -0.5);
+  bboxMax = Vector3f(0.5, 0.5, 0.5);
+
+  os.write("VOL", 3);
+
+  char version = 3;
+  os.write((char *)&version, sizeof(char));
+
+  int value = 1;
+  os.write((char *)&value, sizeof(int));
+
+  os.write((char *)&dim.x(), sizeof(int));
+  os.write((char *)&dim.y(), sizeof(int));
+  os.write((char *)&dim.z(), sizeof(int));
+
+  value = 1;
+  os.write((char *)&value, sizeof(int));
+
+  os.write((char *)&bboxMin.x(), sizeof(float));
+  os.write((char *)&bboxMin.y(), sizeof(float));
+  os.write((char *)&bboxMin.z(), sizeof(float));
+
+  os.write((char *)&bboxMax.x(), sizeof(float));
+  os.write((char *)&bboxMax.y(), sizeof(float));
+  os.write((char *)&bboxMax.z(), sizeof(float));
+
+  auto nodes = m_grid->nodes();
+  for (unsigned i = nodes.size(); i-- > 0;) {
+    auto node = nodes[i];
+    float value = (float)node->mass();
+    os.write((char *)&value, sizeof(float));
+  }
+
+  return ss.str();
 }

@@ -1,6 +1,10 @@
 # Cruft
 .DS_Store
 
+# Simulation temporary files
+renders
+volumes
+
 # Compiled Object files
 build
 *.slo

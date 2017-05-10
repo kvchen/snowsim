@@ -18,6 +18,7 @@ public:
             std::vector<CollisionObject *> colliders);
 
   size_t stepCount() { return m_stepCount; }
+  std::string exportVolumeData();
 
   void advance(double delta_t);
   void rasterizeParticlesToGrid();

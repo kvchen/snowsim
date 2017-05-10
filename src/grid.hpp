@@ -43,6 +43,7 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   Vector3f position() const;
+  double mass() { return m_mass; }
 
   float basisFunction(Vector3f particlePos) const;
   Vector3f gradBasisFunction(Vector3f particlePos) const;

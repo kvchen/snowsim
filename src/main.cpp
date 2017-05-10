@@ -1,3 +1,6 @@
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <math.h>
 #include <nanogui/nanogui.h>
 #include <random>
@@ -84,16 +87,19 @@ MaterialPoints initializePoints(int numParticles) {
     Vector3f pos, velocity;
     u = 3 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 
-    if (i % 2 == 0) {
-      pos << u * x + 16, u * y + 11, u * z + 10;
-      velocity << -29.4, 0, 0;
-    } else {
-      pos << u * x + 4, u * y + 9, u * z + 10;
-      velocity << 29.4, 0, 0;
-    }
+    // if (i % 2 == 0) {
+    //   pos << u * x + 16, u * y + 11, u * z + 10;
+    //   velocity << -29.4, 0, 0;
+    // } else {
+    //   pos << u * x + 4, u * y + 9, u * z + 10;
+    //   velocity << 29.4, 0, 0;
+    // }
+
+    pos << u * x + 10, u * y + 4, u * z + 10;
+    velocity << 0, -39.2, 0;
 
     double mass = fabs(perlin.noise(pos.x(), pos.y(), pos.z()));
-    if (mass < 0.3) {
+    if (mass < 0.05) {
       continue;
     }
 
@@ -112,7 +118,7 @@ int main() {
 
   SnowModel snowModel;
 
-  const int numParticles = 1e5;
+  const int numParticles = 1e4;
   // const int numParticles = 3e5;
   logger->info("Generating {} random particles", numParticles);
 
@@ -153,17 +159,29 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     if (!renderer->isPaused()) {
-      simulator.advance(1e-3);
+      simulator.advance(1e-5);
     }
 
-    renderer->render();
+    // renderer->render();
 
-    if (!renderer->isPaused()) {
-      renderer->writeScreenshot(simulator.stepCount());
+    if (!renderer->isPaused() && simulator.stepCount() % 16 == 0) {
+      renderer->render();
+      //   // renderer->writeScreenshot(simulator.stepCount());
+      //   std::string volfile = simulator.exportVolumeData();
+      //
+      //   std::stringstream ss;
+      //   ss << "bash -c \"mitsuba -s ../scene/servers.txt -o
+      //   ../renders/output-"
+      //      << std::setfill('0') << std::setw(6) << simulator.stepCount()
+      //      << ".png -D volfile=" << volfile << " ../scene/hetvol.xml\"";
+      //
+      //   system(ss.str().c_str());
+      glfwSwapBuffers(screen->glfwWindow());
     }
-    screen->drawWidgets();
 
-    glfwSwapBuffers(screen->glfwWindow());
+    // screen->drawWidgets();
+
+    // glfwSwapBuffers(screen->glfwWindow());
     glfwPollEvents();
   }
 

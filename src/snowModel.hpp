@@ -15,9 +15,13 @@ typedef struct SnowModel {
 
   // Suggested values from the paper
 
+  // SnowModel()
+  //     : criticalCompression(2.5e-2), criticalStretch(7.5e-3),
+  //       hardeningCoefficient(10.0), initialDensity(4.0e2),
+  //       initialYoungsModulus(1.4e5), poissonRatio(0.2) {
   SnowModel()
       : criticalCompression(2.5e-2), criticalStretch(7.5e-3),
-        hardeningCoefficient(10.0), initialDensity(4.0e2),
+        hardeningCoefficient(20.0), initialDensity(4.0e2),
         initialYoungsModulus(1.4e5), poissonRatio(0.2) {
     initialLambda = initialYoungsModulus * poissonRatio / (1 + poissonRatio) /
                     (1 - 2 * poissonRatio);

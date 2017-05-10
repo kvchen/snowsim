@@ -9,5 +9,5 @@ out vec4 color;
 
 void main() {
   color = in_color;
-  color.w *= (mass - 0.5) * 2;
+  color.w = mass * 0.3;
 }
