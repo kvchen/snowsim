@@ -81,20 +81,24 @@ MaterialPoints initializePoints(int numParticles) {
     double y = randomPos();
     double z = randomPos();
 
+    Vector3f pos, velocity;
     u = 3 * cbrt(u) / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 
-    Vector3f pos, velocity;
-
     if (i % 2 == 0) {
-      pos << u * x + 16, u * y + 11.5, u * z + 10;
+      pos << u * x + 16, u * y + 11, u * z + 10;
       velocity << -29.4, 0, 0;
     } else {
-      pos << u * x + 4, u * y + 8.5, u * z + 10;
+      pos << u * x + 4, u * y + 9, u * z + 10;
       velocity << 29.4, 0, 0;
     }
 
     double mass = fabs(perlin.noise(pos.x(), pos.y(), pos.z()));
-    points.particles().push_back(new MaterialPoint(mass, pos, velocity));
+    if (mass < 0.3) {
+      continue;
+    }
+
+    points.particles().push_back(
+        new MaterialPoint(mass * 0.5 + 0.5, pos, velocity));
   }
 
   return points;
@@ -108,32 +112,32 @@ int main() {
 
   SnowModel snowModel;
 
-  const int numParticles = 1e4;
+  const int numParticles = 1e5;
   // const int numParticles = 3e5;
   logger->info("Generating {} random particles", numParticles);
 
   MaterialPoints points = initializePoints(numParticles);
   Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
 
-  Vector3f bboxMin = grid.origin() + 0.1;
-  Vector3f bboxMax = grid.origin() + grid.extent() - 0.1;
+  Vector3f bboxMin = grid.origin().array() + 0.5f;
+  Vector3f bboxMax = (grid.origin() + grid.extent()).array() - 0.5f;
   double bboxFriction = 0.05;
 
   std::vector<CollisionObject *> colliders;
 
-  Plane *ground = new Plane(bboxMin, Vector3f(0, 1, 0), bboxFriction);
-  Plane *top = new Plane(bboxMax, Vector3f(0, -1, 0), bboxFriction);
-  Plane *left = new Plane(bboxMin, Vector3f(1, 0, 0), bboxFriction);
-  Plane *right = new Plane(bboxMax, Vector3f(-1, 0, 0), bboxFriction);
-  Plane *front = new Plane(bboxMin, Vector3f(0, 0, 1), bboxFriction);
-  Plane *back = new Plane(bboxMax, Vector3f(0, 0, -1), bboxFriction);
+  Plane *ground = new Plane(bboxMin, Vector3f(0, 1, 0), bboxFriction, false);
+  Plane *top = new Plane(bboxMax, Vector3f(0, -1, 0), bboxFriction, true);
+  Plane *left = new Plane(bboxMin, Vector3f(1, 0, 0), bboxFriction, true);
+  Plane *right = new Plane(bboxMax, Vector3f(-1, 0, 0), bboxFriction, true);
+  Plane *back = new Plane(bboxMin, Vector3f(0, 0, 1), bboxFriction, true);
+  Plane *front = new Plane(bboxMax, Vector3f(0, 0, -1), bboxFriction, true);
 
   colliders.push_back(ground);
   colliders.push_back(top);
   colliders.push_back(left);
   colliders.push_back(right);
-  colliders.push_back(front);
   colliders.push_back(back);
+  colliders.push_back(front);
 
   renderer = new Renderer(*screen, grid, points);
   Simulator simulator(points, &grid, snowModel, colliders);
@@ -148,11 +152,15 @@ int main() {
   while (!glfwWindowShouldClose(screen->glfwWindow())) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    if (renderer->isPaused()) {
+    if (!renderer->isPaused()) {
       simulator.advance(1e-3);
     }
 
     renderer->render();
+
+    if (!renderer->isPaused()) {
+      renderer->writeScreenshot(simulator.stepCount());
+    }
     screen->drawWidgets();
 
     glfwSwapBuffers(screen->glfwWindow());

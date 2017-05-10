@@ -32,7 +32,7 @@ Simulator::Simulator(MaterialPoints &materialPoints, Grid *grid,
  * 10. Update particle positions (updateParticlePostions)
  **/
 void Simulator::advance(double delta_t) {
-  logger->info("[Beginning step {} -> advancing by {}]", stepCount, delta_t);
+  logger->info("[Beginning step {} -> advancing by {}]", stepCount(), delta_t);
 
   rasterizeParticlesToGrid();
 
@@ -99,6 +99,11 @@ void Simulator::rasterizeParticlesToGrid() {
 
   for (auto &mp : m_materialPoints.particles()) {
     int idx = m_grid->getParticleIdx(mp);
+    if (idx < 0 || idx >= m_grid->m_gridCells.size()) {
+      logger->error("Particle index {} exceeds grid boundaries", idx);
+      std::cout << *mp << std::endl;
+    }
+
     m_grid->cells()[idx]->addMaterialPoint(mp);
   }
 
@@ -202,7 +207,7 @@ void Simulator::detectGridCollisions(double delta_t) {
       double normComponent = collider->friction() * magnitude;
       double tangentNorm = tangentialVelocity.norm();
 
-      if (tangentNorm <= -normComponent) {
+      if (collider->sticky() || tangentNorm <= -normComponent) {
         relVelocity.setZero();
       } else {
         relVelocity = tangentialVelocity * (1 + normComponent / tangentNorm);
@@ -285,6 +290,8 @@ void Simulator::detectParticleCollisions(double delta_t) {
         continue;
       }
 
+      // std::cout << "GOT HERE" << std::endl;
+
       Vector3f tangentialVelocity = relVelocity - magnitude * normal;
 
       // Only apply dynamic friction if the tangential velocity is large
@@ -293,17 +300,13 @@ void Simulator::detectParticleCollisions(double delta_t) {
       double normComponent = collider->friction() * magnitude;
       double tangentNorm = tangentialVelocity.norm();
 
-      // if (tangentNorm <= -normComponent) {
-      relVelocity.setZero();
-      // } else {
-      //   std::cout << "GOT HERE" << std::endl;
-      //   relVelocity = tangentialVelocity * (1 + normComponent /
-      //   tangentNorm);
-      // }
+      if (collider->sticky() || tangentNorm <= -normComponent) {
+        relVelocity.setZero();
+      } else {
+        relVelocity = tangentialVelocity * (1 + normComponent / tangentNorm);
+      }
 
-      // std::cout << "BEFORE: " << mp->m_velocity << std::endl;
-      // mp->m_velocity = relVelocity + collider->velocity();
-      // std::cout << "AFTER: " << mp->m_velocity << std::endl;
+      mp->m_velocity = relVelocity + collider->velocity();
     }
   }
 }

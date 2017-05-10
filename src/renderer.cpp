@@ -1,7 +1,10 @@
+#include "spdlog/spdlog.h"
 #include <Eigen/Dense>
 #include <cmath>
+#include <iomanip>
 #include <nanogui/nanogui.h>
 
+#include "lodepng.h"
 #include "renderer.hpp"
 
 using namespace Eigen;
@@ -10,6 +13,7 @@ using namespace SnowSimulator;
 
 Renderer::Renderer(Screen &screen, Grid &grid, MaterialPoints &materialPoints)
     : m_screen(screen), m_grid(grid), m_materialPoints(materialPoints) {
+  logger = spdlog::get("snowsim");
   m_snowShader.initFromFiles("snow_shader", "../shaders/snow.vert",
                              "../shaders/snow.frag");
 
@@ -56,6 +60,8 @@ Renderer::Renderer(Screen &screen, Grid &grid, MaterialPoints &materialPoints)
 
 void Renderer::render() {
   m_snowShader.bind();
+
+  m_camera.rotate_by(0, 1.0e-3);
 
   Matrix4d view = getViewMatrix();
   Matrix4d projection = getProjectionMatrix();
@@ -290,4 +296,28 @@ Matrix4d Renderer::getViewMatrix() {
   lookAt(3, 3) = 1.0;
 
   return lookAt;
+}
+
+void Renderer::writeScreenshot(int stepCount) {
+  std::vector<unsigned char> windowPixels(4 * m_screenWidth * m_screenHeight);
+  glReadPixels(0, 0, m_screenWidth, m_screenHeight, GL_RGBA, GL_UNSIGNED_BYTE,
+               &windowPixels[0]);
+
+  std::vector<unsigned char> flippedPixels(4 * m_screenWidth * m_screenHeight);
+  for (int row = 0; row < m_screenHeight; ++row)
+    memcpy(&flippedPixels[row * m_screenWidth * 4],
+           &windowPixels[(m_screenHeight - row - 1) * m_screenWidth * 4],
+           4 * m_screenWidth);
+
+  time_t t = time(nullptr);
+  tm *lt = localtime(&t);
+  std::stringstream ss;
+
+  ss << "screenshot_" << std::setfill('0') << std::setw(6) << stepCount
+     << ".png";
+
+  std::string file = ss.str();
+  if (lodepng::encode(file, flippedPixels, m_screenWidth, m_screenHeight)) {
+    logger->error("Failed to write screenshot to disk!");
+  }
 }

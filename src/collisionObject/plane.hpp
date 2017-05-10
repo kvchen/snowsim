@@ -11,8 +11,10 @@ namespace SnowSimulator {
 
 class Plane : public CollisionObject {
 public:
-  Plane(const Vector3f &point, const Vector3f &normal, double friction)
-      : m_point(point), m_normal(normal.normalized()), m_friction(friction) {
+  Plane(const Vector3f &point, const Vector3f &normal, double friction,
+        bool sticky)
+      : m_point(point), m_normal(normal.normalized()), m_friction(friction),
+        m_sticky(sticky) {
     m_velocity.setZero();
   }
 
@@ -24,12 +26,16 @@ public:
 
   double friction() { return m_friction; }
 
+  bool sticky() { return m_sticky; }
+
 protected:
   Vector3f m_point;
   Vector3f m_normal;
 
   Vector3f m_velocity;
   double m_friction;
+
+  bool m_sticky;
 };
 
 } // namespace SnowSimulator

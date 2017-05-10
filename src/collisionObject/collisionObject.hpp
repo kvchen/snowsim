@@ -16,6 +16,8 @@ public:
   virtual Vector3f velocity() = 0;
 
   virtual double friction() = 0;
+
+  virtual bool sticky() = 0;
 };
 
 } // namespace SnowSimulator
