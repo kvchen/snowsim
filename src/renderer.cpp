@@ -16,6 +16,9 @@ Renderer::Renderer(Screen &screen, Grid &grid, MaterialPoints &materialPoints)
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);
 
+  glEnable(GL_PROGRAM_POINT_SIZE);
+  glEnable(GL_DEPTH_TEST);
+
   // Vector3d avg_pm_position(0, 0, 0);
 
   Vector3d gridDimensions = grid.m_dim.cast<double>();
@@ -52,18 +55,12 @@ Renderer::Renderer(Screen &screen, Grid &grid, MaterialPoints &materialPoints)
 }
 
 void Renderer::render() {
-  glEnable(GL_PROGRAM_POINT_SIZE);
-  glEnable(GL_DEPTH_TEST);
-
   m_snowShader.bind();
-
-  Matrix4d model;
-  model.setIdentity();
 
   Matrix4d view = getViewMatrix();
   Matrix4d projection = getProjectionMatrix();
 
-  Matrix4f modelViewProjection = (projection * view * model).cast<float>();
+  Matrix4f modelViewProjection = (projection * view).cast<float>();
 
   m_snowShader.setUniform("modelViewProjection", modelViewProjection);
   m_snowShader.setUniform("in_color", Color(1.0f, 1.0f, 1.0f, 1.0f));

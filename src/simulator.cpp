@@ -12,6 +12,7 @@ Simulator::Simulator(MaterialPoints &materialPoints, Grid *grid,
                      std::vector<CollisionObject *> colliders)
     : m_materialPoints(materialPoints), m_grid(grid), m_snowModel(snowModel),
       m_colliders(colliders) {
+  m_stepCount = 0;
   logger = spdlog::get("snowsim");
 }
 
@@ -37,7 +38,7 @@ void Simulator::advance(double delta_t) {
 
   // On the first timestep, we need to compute particle volumes and densities
 
-  if (stepCount == 0) {
+  if (m_stepCount == 0) {
     setParticleVolumesAndDensities();
   }
 
@@ -54,7 +55,7 @@ void Simulator::advance(double delta_t) {
   detectParticleCollisions(delta_t);
   updateParticlePositions(delta_t);
 
-  stepCount++;
+  m_stepCount++;
 }
 
 void Simulator::rasterizeParticlesToGrid() {

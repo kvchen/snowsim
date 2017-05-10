@@ -19,6 +19,9 @@ using namespace nanogui;
 using namespace Eigen;
 using namespace SnowSimulator;
 
+#define FRAMERATE = 60;
+#define TIMESTEP = 1.0e-3;
+
 Screen *screen;
 Renderer *renderer;
 
@@ -90,8 +93,6 @@ MaterialPoints initializePoints(int numParticles) {
       velocity << 29.4, 0, 0;
     }
 
-    // Vector3f velocity = Vector3f::Zero();
-    // Vector3f velocity(0, -29.4, 0);
     double mass = fabs(perlin.noise(pos.x(), pos.y(), pos.z()));
     points.particles().push_back(new MaterialPoint(mass, pos, velocity));
   }
@@ -101,8 +102,6 @@ MaterialPoints initializePoints(int numParticles) {
 
 int main() {
   nanogui::init();
-  // glEnable(GL_PROGRAM_POINT_SIZE);
-  // glEnable(GL_DEPTH_TEST);
 
   auto logger = spdlog::stdout_color_mt("snowsim");
   screen = new nanogui::Screen({1024, 768}, "Snow Simulator");
@@ -116,8 +115,8 @@ int main() {
   MaterialPoints points = initializePoints(numParticles);
   Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
 
-  Vector3f bboxMin = grid.origin();
-  Vector3f bboxMax = bboxMin + grid.extent();
+  Vector3f bboxMin = grid.origin() + 0.1;
+  Vector3f bboxMax = grid.origin() + grid.extent() - 0.1;
   double bboxFriction = 0.05;
 
   std::vector<CollisionObject *> colliders;

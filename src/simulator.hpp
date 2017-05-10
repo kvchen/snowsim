@@ -17,6 +17,8 @@ public:
   Simulator(MaterialPoints &materialPoints, Grid *grid, SnowModel &snowModel,
             std::vector<CollisionObject *> colliders);
 
+  size_t stepCount() { return m_stepCount; }
+
   void advance(double delta_t);
   void rasterizeParticlesToGrid();
   void setParticleVolumesAndDensities();
@@ -39,7 +41,7 @@ private:
   Grid *m_grid;
   SnowModel &m_snowModel;
 
-  size_t stepCount;
+  size_t m_stepCount;
 
   std::shared_ptr<spdlog::logger> logger;
 
