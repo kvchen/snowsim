@@ -1,6 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include "spdlog/spdlog.h"
 #include <nanogui/nanogui.h>
 
 #include "camera.hpp"
@@ -17,6 +18,7 @@ public:
   Renderer(Screen &screen, Grid &grid, MaterialPoints &materialPoints);
   void render();
 
+  void writeScreenshot(int stepCount);
   bool isPaused() { return m_isPaused; }
 
   virtual bool cursorPosCallbackEvent(double x, double y);
@@ -73,6 +75,8 @@ private:
   int m_screenHeight;
 
   bool m_isPaused = false;
+
+  std::shared_ptr<spdlog::logger> logger;
 };
 
 } // namespace SnowSimulator

@@ -16,6 +16,8 @@ set(SNOWSIM_SOURCE
   camera.cpp
   renderer.cpp
   simulator.cpp
+
+  include/lodepng.cpp
 )
 
 include_directories(collisionObject)
