@@ -3,9 +3,10 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <spdlog/spdlog.h>
 
+#include "semiImplicitMethod.hpp"
 #include "simulator.hpp"
-#include "spdlog/spdlog.h"
 
 using namespace SnowSimulator;
 
@@ -13,9 +14,9 @@ Simulator::Simulator(MaterialPoints &materialPoints, Grid *grid,
                      SnowModel &snowModel,
                      std::vector<CollisionObject *> colliders)
     : m_materialPoints(materialPoints), m_grid(grid), m_snowModel(snowModel),
-      m_colliders(colliders) {
-  m_stepCount = 0;
+      m_colliders(colliders), m_stepCount(0) {
   logger = spdlog::get("snowsim");
+  m_integrator = new SemiImplicitMethod(grid);
 }
 
 /**
@@ -49,8 +50,7 @@ void Simulator::advance(double delta_t) {
 
   detectGridCollisions(delta_t);
 
-  explicitIntegration();
-  // solveLinearSystem();
+  solveVelocity(delta_t);
 
   updateDeformationGradient(delta_t);
   updateParticleVelocities(delta_t);
@@ -72,28 +72,6 @@ void Simulator::rasterizeParticlesToGrid() {
   }
 
   // Place all particles in their updated cells
-
-  // TODO(kvchen): Comment this out once we fix this bug
-
-  // for (auto &mp : m_materialPoints.particles()) {
-  //   Vector3f idx = (mp->m_position.array() / m_grid->m_spacing).floor();
-  //   int i = m_grid->vectorToIdx(idx.cast<int>());
-  //
-  //   if (i < 0 || i >= m_grid->m_gridCells.size()) {
-  //     logger->error("Particle index {} exceeds grid boundaries", i);
-  //     std::cout << *mp << std::endl;
-  //
-  //     logger->error("Other particles in the same cell as invalid particle:");
-  //     for (auto &other : mp->cell()->particles()) {
-  //       if (other == mp) {
-  //         continue;
-  //       }
-  //       logger->error("Distance to invalid particle: {}",
-  //                     (other->position() - mp->position()).norm());
-  //       std::cout << *other << std::endl;
-  //     }
-  //   }
-  // }
 
   for (auto &cell : m_grid->cells()) {
     cell->clear();
@@ -144,28 +122,41 @@ void Simulator::setParticleVolumesAndDensities() {
 
 void Simulator::computeGridForces() {
   for (auto &mp : m_materialPoints.particles()) {
-    JacobiSVD<Matrix3f> svd(mp->m_defElastic, ComputeFullU | ComputeFullV);
+    JacobiSVD<Matrix3f> svd(mp->elasticDeformation(),
+                            ComputeFullU | ComputeFullV);
 
-    double Jp = mp->m_defPlastic.determinant();
-    double Je = mp->m_defElastic.determinant();
+    float Jp = mp->plasticDeformation().determinant();
+    float Je = mp->elasticDeformation().determinant();
 
-    Matrix3f Re = svd.matrixU() * svd.matrixV().transpose();
+    Matrix3f Vt = svd.matrixV().transpose();
+
+    Matrix3f Re = svd.matrixU() * Vt;
+    Matrix3f Se = svd.matrixV() * svd.singularValues().asDiagonal() * Vt;
 
     double epsilon =
         exp(fmin(m_snowModel.hardeningCoefficient * (1 - Jp), 1e3));
+    double mu = epsilon * m_snowModel.initialMu;
+    double lambda = epsilon * m_snowModel.initialLambda;
+
+    // Cache the decomposed values of Fe for use in implicit integration
+
+    mp->Jp() = Jp;
+    mp->Je() = Je;
+    mp->Re() = Re;
+    mp->Se() = Se;
+
+    mp->mu() = mu;
+    mp->lambda() = lambda;
 
     // Compute the Cauchy stress
-    // mu * 2 * (fe - re)_f
 
-    Matrix3f stress =
-        epsilon *
-        (2 * m_snowModel.initialMu * (mp->m_defElastic - Re) *
-             mp->m_defElastic.transpose() +
-         Matrix3f::Identity() * (m_snowModel.initialLambda * (Je - 1) * Je));
+    Matrix3f stress = 2 * mu * (mp->elasticDeformation() - Re) *
+                          mp->elasticDeformation().transpose() +
+                      Matrix3f::Identity() * (lambda * (Je - 1) * Je);
 
     m_grid->forEachNeighbor(mp, [mp, &stress](GridNode *node) {
       node->m_force -=
-          mp->m_volume * stress * node->gradBasisFunction(mp->m_position);
+          mp->m_volume * stress * node->gradBasisFunction(mp->position());
     });
   }
 }
@@ -220,11 +211,14 @@ void Simulator::detectGridCollisions(double delta_t) {
   }
 }
 
-void Simulator::explicitIntegration() {
-  for (auto &node : m_grid->getAllNodes()) {
-    node->m_nextVelocity = node->m_velocityStar;
-    // std::cout << node->m_nextVelocity << std::endl;
-  }
+void Simulator::solveVelocity(double delta_t) {
+  // Uncomment this for explicit integration
+  //
+  // for (auto &node : m_grid->getAllNodes()) {
+  //   node->m_nextVelocity = node->m_velocityStar;
+  // }
+
+  m_integrator->solve(delta_t);
 }
 
 void Simulator::updateDeformationGradient(double delta_t) {
@@ -249,9 +243,9 @@ void Simulator::updateDeformationGradient(double delta_t) {
     mp->m_defPlastic =
         svd.matrixV() * sigma.inverse() * svd.matrixU().transpose() * defNext;
     mp->m_defElastic = svd.matrixU() * sigma * svd.matrixV().transpose();
-    if (!defNext.isApprox(mp->m_defElastic * mp->m_defPlastic)) {
-      logger->warn("Deformation update is incorrect");
-    }
+    // if (!defNext.isApprox(mp->m_defElastic * mp->m_defPlastic)) {
+    //   logger->warn("Deformation update is incorrect");
+    // }
   }
 }
 
@@ -280,19 +274,13 @@ void Simulator::detectParticleCollisions(double delta_t) {
         continue;
       }
 
-      // std::cout << mp->position() << std::endl;
-
       Vector3f normal = collider->normal(position);
       Vector3f relVelocity = mp->velocity() - collider->velocity();
-
-      // std::cout << collider->velocity() << std::endl;
 
       double magnitude = relVelocity.dot(normal);
       if (magnitude >= 0) {
         continue;
       }
-
-      // std::cout << "GOT HERE" << std::endl;
 
       Vector3f tangentialVelocity = relVelocity - magnitude * normal;
 
@@ -321,10 +309,6 @@ void Simulator::detectParticleCollisions(double delta_t) {
 void Simulator::updateParticlePositions(double delta_t) {
   for (auto &mp : m_materialPoints.particles()) {
     mp->m_position += delta_t * mp->m_velocity;
-
-    // mp->m_position = mp->m_position.array().min(
-    //     (m_grid->m_dim.array()).cast<float>() * m_grid->m_spacing);
-    // mp->m_position = mp->m_position.cwiseMax(0);
   }
 }
 

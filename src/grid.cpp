@@ -3,16 +3,15 @@
 #include <boost/math/special_functions/sign.hpp>
 #include <iostream>
 #include <math.h>
+#include <spdlog/spdlog.h>
 
 #include "grid.hpp"
-#include "spdlog/spdlog.h"
+#include "materialPoints.hpp"
 
 using namespace Eigen;
 using namespace SnowSimulator;
 
-// ============================================================================
-// GRIDCELL METHODS
-// ============================================================================
+// GridCell methods
 
 GridCell::GridCell() {}
 
@@ -23,9 +22,9 @@ void GridCell::addMaterialPoint(MaterialPoint *materialPoint) {
 
 void GridCell::clear() { m_materialPoints.clear(); }
 
-// ============================================================================
-// GRIDNODE METHODS
-// ============================================================================
+std::vector<MaterialPoint *> &GridCell::particles() { return m_materialPoints; }
+
+// GridNode methods
 
 GridNode::GridNode(Vector3i idx, Grid *grid)
     : m_idx(idx), m_grid(grid), m_mass(0), m_velocity(Vector3f::Zero()),
@@ -95,9 +94,7 @@ Vector3f GridNode::gradBasisFunction(Vector3f particlePos) const {
   return Vector3f(gx, gy, gz);
 }
 
-// ============================================================================
-// GRID METHODS
-// ============================================================================
+// Grid methods
 
 Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
     : m_origin(origin), m_dim(dimensions), m_spacing(spacing) {
@@ -145,6 +142,28 @@ Grid::Grid(Vector3f origin, Vector3i dimensions, float spacing)
       }
     }
   }
+}
+
+// void forEachNeighbor(MaterialPoint *particle,
+//                      std::function<void(GridNode *node)> f) {
+//   Array3i particleIdx =
+//       (particle->position().array() / m_spacing).floor().cast<int>();
+//   Array3i min = (particleIdx - 2).max(0);
+//   Array3i max = (particleIdx + 3).min(m_dim.array() - 1);
+//
+//   for (int x = min.x(); x < max.x(); x++) {
+//     for (int y = min.y(); y < max.y(); y++) {
+//       for (int z = min.z(); z < max.z(); z++) {
+//         int neighborIdx = vectorToIdx(Vector3i(x, y, z));
+//         f(m_gridNodes[neighborIdx]);
+//       }
+//     }
+//   }
+// }
+
+int Grid::getParticleIdx(MaterialPoint *mp) {
+  Vector3i idx = (mp->position().array() / m_spacing).cast<int>();
+  return vectorToIdx(idx);
 }
 
 std::vector<GridNode *> Grid::getAllNodes() { return m_gridNodes; }

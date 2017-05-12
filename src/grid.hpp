@@ -1,9 +1,8 @@
-#ifndef GRID_H
-#define GRID_H
+#ifndef SNOWSIM_GRID_H
+#define SNOWSIM_GRID_H
 
 #include <Eigen/Dense>
 
-#include "collisionObject.hpp"
 #include "materialPoints.hpp"
 #include "snowModel.hpp"
 
@@ -11,29 +10,20 @@ using namespace Eigen;
 
 namespace SnowSimulator {
 
-// Forward declarations
-
-class MaterialPoint;
-class MaterialPoints;
-
+class Grid;
 class GridCell;
 class GridNode;
-class Grid;
 
-/**
- * A simple class that binds a collection of particles to a particular
- * GridNode.
- */
 class GridCell {
 public:
   GridCell();
-  // GridCell(GridNode *gridNode);
+
   void addMaterialPoint(MaterialPoint *materialPoint);
   void clear();
 
-  std::vector<MaterialPoint *> &particles() { return m_materialPoints; }
+  std::vector<MaterialPoint *> &particles();
 
-  GridNode *m_node; // Pointer to the immediately adjacent GridNode
+private:
   std::vector<MaterialPoint *> m_materialPoints;
 };
 
@@ -53,19 +43,29 @@ public:
 
   Vector3f &velocity() { return m_velocity; };
   Vector3f &nextVelocity() { return m_nextVelocity; };
+  Vector3f &velocityStar() { return m_velocityStar; };
   Vector3f &force() { return m_force; };
+
+  std::vector<GridCell *> &surroundingCells() { return m_neighborCells; }
 
   std::vector<GridNode *> m_neighbors;
   std::vector<GridCell *> m_neighborCells;
 
   // Physical properties
 
+  double m_mass;
+  Vector3f m_force;
+
+  // Velocity
+
   Vector3f m_velocity;
   Vector3f m_nextVelocity;
   Vector3f m_velocityStar;
 
-  double m_mass;
-  Vector3f m_force;
+  // Used for implicit update
+
+  Vector3f m_r;
+  Vector3f m_s;
 
 private:
   float cubicBSpline(float x) const;
@@ -87,7 +87,7 @@ public:
   template <typename Lambda>
   void forEachNeighbor(MaterialPoint *particle, Lambda &&f) {
     Array3i particleIdx =
-        (particle->m_position.array() / m_spacing).floor().cast<int>();
+        (particle->position().array() / m_spacing).floor().cast<int>();
     Array3i min = (particleIdx - 2).max(0);
     Array3i max = (particleIdx + 3).min(m_dim.array() - 1);
 
@@ -110,10 +110,7 @@ public:
     return idx.x() + m_dim.x() * (idx.y() + m_dim.y() * idx.z());
   }
 
-  int getParticleIdx(MaterialPoint *mp) {
-    Vector3i idx = (mp->position().array() / m_spacing).cast<int>();
-    return vectorToIdx(idx);
-  }
+  int getParticleIdx(MaterialPoint *mp);
 
   // Accessor methods
 

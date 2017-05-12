@@ -3,21 +3,25 @@ cmake_minimum_required(VERSION 3.5)
 # Source files
 
 set(SNOWSIM_SOURCE
-  main.cpp
+  # Includes
+  include/lodepng.cpp
 
   # Base classes
   # gravityField.cpp
 
   # Data classes
   grid.cpp
-  # particle.cpp
+  materialPoints.cpp
 
   # GUI
   camera.cpp
   renderer.cpp
   simulator.cpp
 
-  include/lodepng.cpp
+  # Solvers
+  semiImplicitMethod.cpp
+
+  main.cpp
 )
 
 include_directories(collisionObject)

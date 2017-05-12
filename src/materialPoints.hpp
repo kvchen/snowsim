@@ -1,11 +1,10 @@
-#ifndef MATERIALPOINTS_H
-#define MATERIALPOINTS_H
+#ifndef SNOWSIM_MATERIALPOINTS_H
+#define SNOWSIM_MATERIALPOINTS_H
 
 #include <iostream>
 #include <vector>
 
-#include "forceField.hpp"
-#include "grid.hpp"
+#include "materialPoints.hpp"
 
 using namespace Eigen;
 
@@ -13,27 +12,28 @@ namespace SnowSimulator {
 
 class GridCell;
 
-class MaterialPoint;
-class MaterialPoints;
-
 class MaterialPoint {
 public:
-  MaterialPoint(double mass, Vector3f &position, Vector3f &velocity)
-      : m_mass(mass), m_position(position), m_velocity(velocity) {
-    m_defElastic = Matrix3f::Identity();
-    m_defPlastic = Matrix3f::Identity();
-  }
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  MaterialPoint(double mass, Vector3f &position, Vector3f &velocity);
 
-  double mass() { return m_mass; }
-  double volume() { return m_volume; }
-  double density() { return m_density; }
+  double mass();
+  double volume();
+  double density();
 
-  Vector3f &position() { return m_position; }
-  Vector3f &velocity() { return m_velocity; }
-  Matrix3f &elasticDeformation() { return m_defElastic; }
-  Matrix3f &plasticDeformation() { return m_defPlastic; }
-  GridCell *cell() { return m_cell; }
+  Vector3f &position();
+  Vector3f &velocity();
+  Matrix3f &elasticDeformation();
+  Matrix3f &plasticDeformation();
+  GridCell *cell();
+
+  float &Jp();
+  float &Je();
+  Matrix3f &Re();
+  Matrix3f &Se();
+
+  double &mu();
+  double &lambda();
 
   Vector3f m_position;
   Vector3f m_velocity;
@@ -61,6 +61,16 @@ public:
 
     return os;
   };
+
+private:
+  float m_Jp;
+  float m_Je;
+
+  Matrix3f m_Re;
+  Matrix3f m_Se;
+
+  double m_mu;
+  double m_lambda;
 };
 
 /**
