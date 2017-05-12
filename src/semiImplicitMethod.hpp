@@ -18,7 +18,7 @@ public:
   // Implicit integration methods
 
   void solve(double timestep, double beta = 0.5,
-             double residualThreshold = 1e-20, double maxIterations = 100);
+             double residualThreshold = 1.0e-100, double maxIterations = 100);
   Vector3f computePotentialHessian(GridNode *node, Vector3f deltaU);
   Matrix3f computeAp(MaterialPoint *mp, Vector3f &deltaU, float mu,
                      float lambda);
@@ -31,6 +31,9 @@ public:
   Matrix3f cofactor(Matrix3f &x) const;
 
 private:
+  Matrix3Xf r;
+  Matrix3Xf s;
+
   Grid *m_grid;
   std::shared_ptr<spdlog::logger> logger;
 };

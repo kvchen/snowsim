@@ -8,8 +8,15 @@
 using namespace Eigen;
 using namespace SnowSimulator;
 
+typedef Array<float, 1, Dynamic> RowArrayXf;
+
 SemiImplicitMethod::SemiImplicitMethod(Grid *grid) : m_grid(grid) {
   logger = spdlog::get("snowsim");
+
+  int numNodes = m_grid->nodes().size();
+
+  r = Matrix3Xd::Zero(3, numNodes);
+  s = Matrix3Xd::Zero(3, numNodes);
 }
 
 /**
@@ -23,50 +30,62 @@ void SemiImplicitMethod::solve(double timestep, double beta,
 
   // Initialize our linear system
 
-  MatrixXf r = MatrixXf::Zero(3, numNodes);
-  MatrixXf s = MatrixXf::Zero(3, numNodes);
+  r.setZero();
+  s.setZero();
 
   for (int i = 0; i < numNodes; i++) {
     auto node = nodes[i];
 
     if (node->mass() > 0) {
       double scale = beta * timestep * timestep / node->mass();
+
       r.col(i) = scale * computePotentialHessian(node, node->velocityStar());
       s.col(i) = r.col(i) + scale * computePotentialHessian(node, r.col(i));
     }
   }
 
-  MatrixXf p(r);
-  MatrixXf q(s);
+  Matrix3Xf p(r);
+  Matrix3Xf q(s);
 
-  VectorXf gamma = r.cwiseProduct(s).colwise().sum().transpose();
+  RowVectorXf gamma = r.cwiseProduct(s).colwise().sum();
 
   double residual = residualThreshold + 1;
   int iteration = 0;
 
-  while (iteration < maxIterations || residual > residualThreshold) {
-    VectorXf alpha = gamma / q.squaredNorm();
-    VectorXf residuals = alpha * p;
+  while (iteration < maxIterations && residual > residualThreshold) {
+    RowVectorXf alpha =
+        gamma.array() / (q.colwise().squaredNorm().array() + 0.000001);
+    Matrix3Xf residuals = p.array().rowwise() * alpha.array();
 
     r -= residuals;
 
     for (int i = 0; i < numNodes; i++) {
       auto node = nodes[i];
+
+      // alpha(i) = gamma(i) /
+
       node->nextVelocity() += residuals.col(i);
 
-      double scale = beta * timestep * timestep / node->mass();
-      s.col(i) = computePotentialHessian(node, r.col(i));
+      if (node->mass() > 0) {
+        double scale = beta * timestep * timestep / node->mass();
+        s.col(i) = r.col(i) + scale * computePotentialHessian(node, r.col(i));
+      }
     }
 
-    RowVectorXf beta = r.cwiseProduct(s).colwise().sum().cwiseQuotient(gamma);
+    RowVectorXf b =
+        r.cwiseProduct(s).colwise().sum().array() / (gamma.array() + 0.000001);
+    gamma = b.cwiseProduct(gamma);
 
-    gamma = beta.cwiseProduct(gamma);
+    p.array().rowwise() *= b.array();
+    q.array().rowwise() *= b.array();
 
-    p.array().rowwise() *= beta.array();
-    q.array().rowwise() *= beta.array();
-
-    residual = residuals.squaredNorm();
+    iteration++;
+    residual = residuals.colwise().squaredNorm().sum();
   }
+
+  logger->info("Conjugate residual method completed in {} iteration(s) with "
+               "final residual {}",
+               iteration + 1, residual);
 }
 
 Vector3f SemiImplicitMethod::computePotentialHessian(GridNode *node,

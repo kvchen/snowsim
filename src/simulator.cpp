@@ -47,7 +47,6 @@ void Simulator::advance(double delta_t) {
 
   computeGridForces();
   updateGridVelocities(delta_t);
-
   detectGridCollisions(delta_t);
 
   solveVelocity(delta_t);

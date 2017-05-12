@@ -123,7 +123,7 @@ int main() {
   logger->info("Generating {} random particles", numParticles);
 
   MaterialPoints points = initializePoints(numParticles);
-  Grid grid(Vector3f(0, 0, 0), Vector3i(100, 100, 100), 0.2);
+  Grid grid(Vector3f(0, 0, 0), Vector3i(50, 50, 50), 0.4);
 
   Vector3f bboxMin = grid.origin().array() + 0.5f;
   Vector3f bboxMax = (grid.origin() + grid.extent()).array() - 0.5f;
@@ -159,7 +159,7 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     if (!renderer->isPaused()) {
-      simulator.advance(1e-5);
+      simulator.advance(1e-3);
     }
 
     // renderer->render();
